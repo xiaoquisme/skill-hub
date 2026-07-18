@@ -1,7 +1,7 @@
 """SQLite database operations for SkillHub."""
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Optional
 
@@ -85,7 +85,7 @@ class Database:
     ) -> dict:
         """Create a new skill record. Returns the created skill."""
         skill_id = str(uuid.uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).isoformat()
         tags_json = "[]" if not tags else str(tags)
 
         await self.conn.execute(
@@ -120,7 +120,7 @@ class Database:
 
     async def update_skill(self, skill_id: str, **kwargs) -> Optional[dict]:
         """Update a skill record."""
-        kwargs["updated_at"] = datetime.utcnow().isoformat()
+        kwargs["updated_at"] = datetime.now(UTC).isoformat()
         set_clause = ", ".join(f"{k} = ?" for k in kwargs)
         values = list(kwargs.values()) + [skill_id]
 

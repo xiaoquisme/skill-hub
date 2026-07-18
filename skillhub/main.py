@@ -38,17 +38,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# API routers
-app.include_router(skills_router)
-app.include_router(auth_router)
-
-# Static files (Web UI)
-static_dir = Path(__file__).parent / "static"
-if static_dir.exists():
-    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
-
-
+# Health check (before static mount)
 @app.get("/api/health")
 async def health():
     """Health check endpoint."""
     return {"status": "ok", "service": "skillhub"}
+
+
+# API routers
+app.include_router(skills_router)
+app.include_router(auth_router)
+
+# Static files (Web UI) - mounted at /ui to not catch API routes
+static_dir = Path(__file__).parent / "static"
+if static_dir.exists():
+    app.mount("/ui", StaticFiles(directory=str(static_dir), html=True), name="static")

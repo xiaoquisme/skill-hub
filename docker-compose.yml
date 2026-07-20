@@ -1,0 +1,15 @@
+services:
+  skillhub:
+    build: .
+    ports:
+      - "${SKILLHUB_PORT:-8000}:8000"
+    volumes:
+      - skillhub-data:/data/db
+      - skillhub-skills:/data/skills
+    environment:
+      - SKILLHUB_HOST=${SKILLHUB_HOST:-0.0.0.0}
+    restart: unless-stopped
+
+volumes:
+  skillhub-data:
+  skillhub-skills:

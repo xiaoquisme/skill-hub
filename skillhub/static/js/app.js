@@ -151,7 +151,7 @@
                 '<dl class="metadata">' +
                     '<dt>' + t('skill.detail.name') + '</dt><dd>' + escapeHtml(skill.name) + '</dd>' +
                     authorHtml + categoryHtml + licenseHtml + tagsHtml +
-                    '<dt>' + t('skill.detail.updated') + '</dt><dd>' + new Date(skill.updated_at).toLocaleDateString() + '</dd>' +
+                    '<dt>' + t('skill.detail.updated') + '</dt><dd>' + formatDate(skill.updated_at) + '</dd>' +
                 '</dl>' +
                 filesHtml + mdHtml +
                 '<div class="install-command">' +
@@ -207,6 +207,11 @@
         var div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;
+    }
+
+    function formatDate(isoString) {
+        if (!isoString) return '';
+        return isoString.slice(0, 10);
     }
 
     init();

@@ -1,5 +1,6 @@
 """Dependency injection for FastAPI."""
 
+import hashlib
 from pathlib import Path
 from typing import Optional
 
@@ -55,7 +56,8 @@ async def get_current_token(
         raise HTTPException(status_code=401, detail="Invalid authorization header")
 
     token = authorization[7:]  # Strip "Bearer " prefix
-    token_record = await db.validate_token(token)
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    token_record = await db.validate_token(token_hash)
     if not token_record:
         raise HTTPException(status_code=401, detail="Invalid API token")
 

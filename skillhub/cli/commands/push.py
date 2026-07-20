@@ -5,35 +5,24 @@ from pathlib import Path
 
 import click
 import httpx
-import yaml
 
 from skillhub.config import load_config
+from skillhub.parsing import parse_frontmatter
 
 
 def parse_skill_md(path: Path) -> dict:
-    """Parse SKILL.md frontmatter to extract metadata."""
+    """Parse SKILL.md from a skill directory, falling back to dir name."""
     skill_md = path / "SKILL.md"
     if not skill_md.exists():
         click.echo(f"Error: No SKILL.md found in {path}", err=True)
         raise SystemExit(1)
 
     content = skill_md.read_text()
-    if not content.startswith("---"):
-        return {"name": path.name}
-
-    parts = content.split("---", 2)
-    if len(parts) < 3:
-        return {"name": path.name}
-
-    try:
-        frontmatter = yaml.safe_load(parts[1])
-        return frontmatter if isinstance(frontmatter, dict) else {"name": path.name}
-    except yaml.YAMLError:
-        return {"name": path.name}
+    result = parse_frontmatter(content)
+    return result if result else {"name": path.name}
 
 
 def collect_files(path: Path) -> list[tuple[str, bytes]]:
-    """Collect all files in the skill directory."""
     files = []
     for file_path in path.rglob("*"):
         if file_path.is_file() and not file_path.name.startswith("."):
@@ -58,21 +47,17 @@ def push(path: Path, force: bool, server: str):
         click.echo("Error: Not authenticated. Run 'skillhub auth login' first.", err=True)
         raise SystemExit(1)
 
-    # Parse skill metadata
     metadata = parse_skill_md(path)
     name = metadata.get("name", path.name)
 
     click.echo(f"Publishing skill: {name}")
 
-    # Collect files
     files = collect_files(path)
     click.echo(f"  Files: {len(files)}")
 
-    # Upload to registry
     headers = {"Authorization": f"Bearer {config.api_token}"}
 
     with httpx.Client(timeout=30.0) as client:
-        # Prepare multipart form data
         data = {
             "name": name,
             "display_name": metadata.get("display_name", ""),

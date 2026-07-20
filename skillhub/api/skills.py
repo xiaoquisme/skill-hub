@@ -1,37 +1,35 @@
 """Skill CRUD endpoints."""
 
 import json
-import os
-from pathlib import Path
 from typing import Optional
 
-import yaml
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from fastapi.responses import FileResponse
 
 from skillhub.api.deps import get_current_token, get_db, get_storage, require_auth
 from skillhub.database import Database
-from skillhub.models import SkillCreate, SkillDetail, SkillFileResponse, SkillResponse
+from skillhub.models import SkillDetail, SkillFileResponse, SkillResponse
+from skillhub.parsing import parse_frontmatter
 from skillhub.storage import SkillStorage
 
 router = APIRouter(prefix="/api/skills", tags=["skills"])
 
 
-def parse_skill_md(content: bytes) -> dict:
-    """Parse SKILL.md frontmatter to extract metadata."""
-    text = content.decode("utf-8")
-    if not text.startswith("---"):
-        return {}
-
-    parts = text.split("---", 2)
-    if len(parts) < 3:
-        return {}
-
-    try:
-        frontmatter = yaml.safe_load(parts[1])
-        return frontmatter if isinstance(frontmatter, dict) else {}
-    except yaml.YAMLError:
-        return {}
+def _skill_from_row(row: dict) -> SkillResponse:
+    tags = json.loads(row["tags"]) if row.get("tags") else []
+    return SkillResponse(
+        id=row["id"],
+        name=row["name"],
+        display_name=row.get("display_name"),
+        description=row.get("description"),
+        category=row.get("category"),
+        tags=tags,
+        author=row.get("author"),
+        license=row.get("license"),
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+        published_by=row.get("published_by"),
+    )
 
 
 @router.get("", response_model=list[SkillResponse])
@@ -43,53 +41,22 @@ async def list_skills(
     offset: int = Query(0, ge=0),
     db: Database = Depends(get_db),
 ):
-    """List and search skills."""
     skills = await db.list_skills(
         query=q, category=category, sort=sort, limit=limit, offset=offset
     )
-    results = []
-    for s in skills:
-        tags = json.loads(s["tags"]) if s.get("tags") else []
-        results.append(
-            SkillResponse(
-                id=s["id"],
-                name=s["name"],
-                display_name=s.get("display_name"),
-                description=s.get("description"),
-                category=s.get("category"),
-                tags=tags,
-                author=s.get("author"),
-                license=s.get("license"),
-                created_at=s["created_at"],
-                updated_at=s["updated_at"],
-                published_by=s.get("published_by"),
-            )
-        )
-    return results
+    return [_skill_from_row(s) for s in skills]
 
 
 @router.get("/{skill_id}", response_model=SkillDetail)
 async def get_skill(skill_id: str, db: Database = Depends(get_db)):
-    """Get skill details."""
     skill = await db.get_skill(skill_id)
     if not skill:
         raise HTTPException(status_code=404, detail="Skill not found")
 
     files = await db.get_skill_files(skill_id)
-    tags = json.loads(skill["tags"]) if skill.get("tags") else []
 
     return SkillDetail(
-        id=skill["id"],
-        name=skill["name"],
-        display_name=skill.get("display_name"),
-        description=skill.get("description"),
-        category=skill.get("category"),
-        tags=tags,
-        author=skill.get("author"),
-        license=skill.get("license"),
-        created_at=skill["created_at"],
-        updated_at=skill["updated_at"],
-        published_by=skill.get("published_by"),
+        **_skill_from_row(skill).model_dump(),
         file_count=len(files),
         files=[
             SkillFileResponse(
@@ -109,7 +76,6 @@ async def download_skill_file(
     db: Database = Depends(get_db),
     storage: SkillStorage = Depends(get_storage),
 ):
-    """Download a skill file."""
     skill = await db.get_skill(skill_id)
     if not skill:
         raise HTTPException(status_code=404, detail="Skill not found")
@@ -139,14 +105,11 @@ async def publish_skill(
     db: Database = Depends(get_db),
     storage: SkillStorage = Depends(get_storage),
 ):
-    """Publish or update a skill."""
     tags_list = json.loads(tags) if tags else []
 
-    # Check if skill with this name already exists
     existing = await db.get_skill_by_name(name)
 
     if existing:
-        # Update existing skill
         skill_id = existing["id"]
         await db.update_skill(
             skill_id,
@@ -159,7 +122,6 @@ async def publish_skill(
             published_by=token,
         )
     else:
-        # Create new skill
         record = await db.create_skill(
             name=name,
             display_name=display_name,
@@ -172,7 +134,6 @@ async def publish_skill(
         )
         skill_id = record["id"]
 
-    # Process uploaded files
     for upload_file in files:
         content = await upload_file.read()
         filename = upload_file.filename or "unnamed"
@@ -184,21 +145,9 @@ async def publish_skill(
             size_bytes=len(content),
         )
 
-    skill = await db.get_skill(skill_id)
-    tags_out = json.loads(skill["tags"]) if skill.get("tags") else []
-    return SkillResponse(
-        id=skill["id"],
-        name=skill["name"],
-        display_name=skill.get("display_name"),
-        description=skill.get("description"),
-        category=skill.get("category"),
-        tags=tags_out,
-        author=skill.get("author"),
-        license=skill.get("license"),
-        created_at=skill["created_at"],
-        updated_at=skill["updated_at"],
-        published_by=skill.get("published_by"),
-    )
+    updated = await db.get_skill(skill_id)
+    assert updated is not None
+    return _skill_from_row(updated)
 
 
 @router.delete("/{skill_id}", status_code=204)
@@ -208,7 +157,6 @@ async def delete_skill(
     db: Database = Depends(get_db),
     storage: SkillStorage = Depends(get_storage),
 ):
-    """Delete a skill."""
     skill = await db.get_skill(skill_id)
     if not skill:
         raise HTTPException(status_code=404, detail="Skill not found")

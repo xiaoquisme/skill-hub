@@ -1,5 +1,6 @@
 """SQLite database operations for SkillHub."""
 
+import json
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -40,16 +41,16 @@ CREATE TABLE IF NOT EXISTS api_tokens (
 );
 """
 
+ALLOWED_SORT_FIELDS = {"created_at", "updated_at", "name", "category"}
+
 
 class Database:
-    """Async SQLite database manager."""
 
     def __init__(self, db_path: Path):
         self.db_path = db_path
         self._conn: Optional[aiosqlite.Connection] = None
 
     async def connect(self) -> None:
-        """Connect to the database and initialize schema."""
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn = await aiosqlite.connect(str(self.db_path))
         self._conn.row_factory = aiosqlite.Row
@@ -58,17 +59,30 @@ class Database:
         await self._conn.commit()
 
     async def close(self) -> None:
-        """Close the database connection."""
         if self._conn:
             await self._conn.close()
             self._conn = None
 
     @property
     def conn(self) -> aiosqlite.Connection:
-        """Get the active connection."""
         if not self._conn:
             raise RuntimeError("Database not connected. Call connect() first.")
         return self._conn
+
+    def _build_filter(
+        self, query: Optional[str], category: Optional[str]
+    ) -> tuple[list[str], list]:
+        conditions, params = [], []
+        if query:
+            conditions.append(
+                "(name LIKE ? OR display_name LIKE ? OR description LIKE ?)"
+            )
+            q = f"%{query}%"
+            params.extend([q, q, q])
+        if category:
+            conditions.append("category = ?")
+            params.append(category)
+        return conditions, params
 
     # --- Skills CRUD ---
 
@@ -83,10 +97,9 @@ class Database:
         license: Optional[str] = None,
         published_by: Optional[str] = None,
     ) -> dict:
-        """Create a new skill record. Returns the created skill."""
         skill_id = str(uuid.uuid4())
         now = datetime.now(UTC).isoformat()
-        tags_json = "[]" if not tags else str(tags)
+        tags_json = json.dumps(tags or [])
 
         await self.conn.execute(
             """INSERT INTO skills (id, name, display_name, description, category,
@@ -99,7 +112,6 @@ class Database:
         return await self.get_skill(skill_id)
 
     async def get_skill(self, skill_id: str) -> Optional[dict]:
-        """Get a skill by ID."""
         async with self.conn.execute(
             "SELECT * FROM skills WHERE id = ?", (skill_id,)
         ) as cursor:
@@ -109,7 +121,6 @@ class Database:
         return None
 
     async def get_skill_by_name(self, name: str) -> Optional[dict]:
-        """Get a skill by name."""
         async with self.conn.execute(
             "SELECT * FROM skills WHERE name = ?", (name,)
         ) as cursor:
@@ -119,7 +130,6 @@ class Database:
         return None
 
     async def update_skill(self, skill_id: str, **kwargs) -> Optional[dict]:
-        """Update a skill record."""
         kwargs["updated_at"] = datetime.now(UTC).isoformat()
         set_clause = ", ".join(f"{k} = ?" for k in kwargs)
         values = list(kwargs.values()) + [skill_id]
@@ -131,7 +141,6 @@ class Database:
         return await self.get_skill(skill_id)
 
     async def delete_skill(self, skill_id: str) -> bool:
-        """Delete a skill and its files."""
         async with self.conn.execute(
             "DELETE FROM skills WHERE id = ?", (skill_id,)
         ) as cursor:
@@ -146,28 +155,14 @@ class Database:
         limit: int = 50,
         offset: int = 0,
     ) -> list[dict]:
-        """List skills with optional search and filtering."""
-        conditions = []
-        params = []
-
-        if query:
-            conditions.append(
-                "(name LIKE ? OR display_name LIKE ? OR description LIKE ?)"
-            )
-            q = f"%{query}%"
-            params.extend([q, q, q])
-
-        if category:
-            conditions.append("category = ?")
-            params.append(category)
-
+        conditions, params = self._build_filter(query, category)
         where = " WHERE " + " AND ".join(conditions) if conditions else ""
-        order = f" ORDER BY {sort} DESC" if sort else ""
-        pagination = f" LIMIT ? OFFSET ?"
+        sort_col = sort if sort in ALLOWED_SORT_FIELDS else "updated_at"
+        order = f" ORDER BY {sort_col} DESC"
         params.extend([limit, offset])
 
         async with self.conn.execute(
-            f"SELECT * FROM skills{where}{order}{pagination}", params
+            f"SELECT * FROM skills{where}{order} LIMIT ? OFFSET ?", params
         ) as cursor:
             rows = await cursor.fetchall()
             return [dict(row) for row in rows]
@@ -175,21 +170,7 @@ class Database:
     async def count_skills(
         self, query: Optional[str] = None, category: Optional[str] = None
     ) -> int:
-        """Count skills matching filters."""
-        conditions = []
-        params = []
-
-        if query:
-            conditions.append(
-                "(name LIKE ? OR display_name LIKE ? OR description LIKE ?)"
-            )
-            q = f"%{query}%"
-            params.extend([q, q, q])
-
-        if category:
-            conditions.append("category = ?")
-            params.append(category)
-
+        conditions, params = self._build_filter(query, category)
         where = " WHERE " + " AND ".join(conditions) if conditions else ""
 
         async with self.conn.execute(
@@ -207,7 +188,6 @@ class Database:
         content_type: str = "text/markdown",
         size_bytes: Optional[int] = None,
     ) -> None:
-        """Add a file record for a skill."""
         await self.conn.execute(
             """INSERT OR REPLACE INTO skill_files (skill_id, filename, content_type, size_bytes)
                VALUES (?, ?, ?, ?)""",
@@ -216,7 +196,6 @@ class Database:
         await self.conn.commit()
 
     async def get_skill_files(self, skill_id: str) -> list[dict]:
-        """Get all files for a skill."""
         async with self.conn.execute(
             "SELECT * FROM skill_files WHERE skill_id = ? ORDER BY filename",
             (skill_id,),
@@ -225,7 +204,6 @@ class Database:
             return [dict(row) for row in rows]
 
     async def delete_skill_files(self, skill_id: str) -> None:
-        """Delete all file records for a skill."""
         await self.conn.execute(
             "DELETE FROM skill_files WHERE skill_id = ?", (skill_id,)
         )
@@ -234,7 +212,6 @@ class Database:
     # --- API Tokens ---
 
     async def create_token(self, token_hash: str, owner_name: Optional[str] = None) -> dict:
-        """Create an API token."""
         await self.conn.execute(
             "INSERT INTO api_tokens (token_hash, owner_name) VALUES (?, ?)",
             (token_hash, owner_name),
@@ -247,15 +224,13 @@ class Database:
             return dict(row) if row else {}
 
     async def validate_token(self, token_hash: str) -> Optional[dict]:
-        """Validate an API token."""
         async with self.conn.execute(
-            "SELECT * FROM api_tokens WHERE token_hash = ?", (token_hash,)
+            "SELECT 1 FROM api_tokens WHERE token_hash = ?", (token_hash,)
         ) as cursor:
             row = await cursor.fetchone()
             return dict(row) if row else None
 
     async def delete_token(self, token_id: int) -> bool:
-        """Delete an API token."""
         async with self.conn.execute(
             "DELETE FROM api_tokens WHERE id = ?", (token_id,)
         ) as cursor:
@@ -263,7 +238,6 @@ class Database:
             return cursor.rowcount > 0
 
     async def list_tokens(self) -> list[dict]:
-        """List all API tokens."""
         async with self.conn.execute(
             "SELECT * FROM api_tokens ORDER BY created_at DESC"
         ) as cursor:

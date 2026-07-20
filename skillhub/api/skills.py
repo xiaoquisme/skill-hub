@@ -6,10 +6,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from fastapi.responses import FileResponse
 
-from skillhub.api.deps import get_current_token, get_db, get_storage, require_auth
+from skillhub.api.deps import get_db, get_storage
 from skillhub.database import Database
 from skillhub.models import SkillDetail, SkillFileResponse, SkillResponse
-from skillhub.parsing import parse_frontmatter
 from skillhub.storage import SkillStorage
 
 router = APIRouter(prefix="/api/skills", tags=["skills"])
@@ -101,7 +100,6 @@ async def publish_skill(
     author: Optional[str] = Form(None),
     license: Optional[str] = Form(None),
     files: list[UploadFile] = File(default=[]),
-    token: str = Depends(require_auth),
     db: Database = Depends(get_db),
     storage: SkillStorage = Depends(get_storage),
 ):
@@ -119,7 +117,6 @@ async def publish_skill(
             tags=json.dumps(tags_list),
             author=author,
             license=license,
-            published_by=token,
         )
     else:
         record = await db.create_skill(
@@ -130,7 +127,6 @@ async def publish_skill(
             tags=tags_list,
             author=author,
             license=license,
-            published_by=token,
         )
         skill_id = record["id"]
 
@@ -153,16 +149,12 @@ async def publish_skill(
 @router.delete("/{skill_id}", status_code=204)
 async def delete_skill(
     skill_id: str,
-    token: str = Depends(require_auth),
     db: Database = Depends(get_db),
     storage: SkillStorage = Depends(get_storage),
 ):
     skill = await db.get_skill(skill_id)
     if not skill:
         raise HTTPException(status_code=404, detail="Skill not found")
-
-    if skill.get("published_by") != token:
-        raise HTTPException(status_code=403, detail="Not authorized to delete this skill")
 
     storage.delete_skill(skill_id)
     await db.delete_skill(skill_id)

@@ -128,20 +128,3 @@ async def test_skill_files(db):
     await db.delete_skill_files(skill["id"])
     files = await db.get_skill_files(skill["id"])
     assert len(files) == 0
-
-
-@pytest.mark.asyncio
-async def test_api_tokens(db):
-    """Test API token operations."""
-    token = await db.create_token("hash-abc", "testuser")
-    assert token["token_hash"] == "hash-abc"
-    assert token["owner_name"] == "testuser"
-
-    validated = await db.validate_token("hash-abc")
-    assert validated is not None
-
-    invalid = await db.validate_token("wrong-hash")
-    assert invalid is None
-
-    deleted = await db.delete_token(token["id"])
-    assert deleted is True

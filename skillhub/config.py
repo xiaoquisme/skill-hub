@@ -27,7 +27,6 @@ class AppConfig(BaseModel):
 
     server: ServerConfig = Field(default_factory=ServerConfig)
     storage: StorageConfig = Field(default_factory=StorageConfig)
-    api_token: Optional[str] = None
     registry_url: str = "http://127.0.0.1:8000"
 
 

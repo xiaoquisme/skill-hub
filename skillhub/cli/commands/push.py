@@ -43,10 +43,6 @@ def push(path: Path, force: bool, server: str):
     config = load_config()
     registry_url = server or config.registry_url
 
-    if not config.api_token:
-        click.echo("Error: Not authenticated. Run 'skillhub auth login' first.", err=True)
-        raise SystemExit(1)
-
     metadata = parse_skill_md(path)
     name = metadata.get("name", path.name)
 
@@ -54,8 +50,6 @@ def push(path: Path, force: bool, server: str):
 
     files = collect_files(path)
     click.echo(f"  Files: {len(files)}")
-
-    headers = {"Authorization": f"Bearer {config.api_token}"}
 
     with httpx.Client(timeout=30.0) as client:
         data = {
@@ -74,7 +68,6 @@ def push(path: Path, force: bool, server: str):
 
         response = client.post(
             f"{registry_url}/api/skills",
-            headers=headers,
             data=data,
             files=upload_files,
         )
@@ -82,9 +75,6 @@ def push(path: Path, force: bool, server: str):
         if response.status_code == 201:
             skill = response.json()
             click.echo(f"  Published: {skill['name']} (id: {skill['id'][:8]}...)")
-        elif response.status_code == 401:
-            click.echo("Error: Authentication failed. Check your API token.", err=True)
-            raise SystemExit(1)
         else:
             click.echo(f"Error: {response.status_code} - {response.text}", err=True)
             raise SystemExit(1)

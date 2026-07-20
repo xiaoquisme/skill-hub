@@ -307,6 +307,67 @@ header .tagline {
     background: rgba(255, 255, 255, 0.2);
 }
 
+/* Skill Content Collapsible */
+.skill-content {
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.collapse-toggle {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--bg);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    transition: background 0.2s;
+}
+
+.collapse-toggle:hover {
+    background: var(--border);
+}
+
+.collapse-icon {
+    transition: transform 0.2s;
+    font-size: 12px;
+}
+
+.skill-content.collapsed .collapse-icon {
+    transform: rotate(-90deg);
+}
+
+.collapse-body {
+    max-height: 500px;
+    overflow-y: auto;
+    transition: max-height 0.3s ease;
+}
+
+.skill-content.collapsed .collapse-body {
+    max-height: 0;
+    overflow: hidden;
+}
+
+.collapse-body pre {
+    margin: 0;
+    padding: 16px;
+    background: #1e293b;
+    color: #e2e8f0;
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-x: auto;
+}
+
+.collapse-body code {
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+}
+
 /* Loading and Empty States */
 .loading, .empty {
     text-align: center;

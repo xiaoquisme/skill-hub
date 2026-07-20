@@ -4,7 +4,6 @@
 (function() {
     'use strict';
 
-    // DOM Elements
     const searchInput = document.getElementById('search-input');
     const searchBtn = document.getElementById('search-btn');
     const categoryFilter = document.getElementById('category-filter');
@@ -17,13 +16,11 @@
     let allSkills = [];
     let categories = new Set();
 
-    // Initialize
     async function init() {
         await loadSkills();
         setupEventListeners();
     }
 
-    // Load skills from API
     async function loadSkills(query, category, sort) {
         skillList.innerHTML = '<div class="loading">Loading skills...</div>';
 
@@ -38,7 +35,6 @@
         }
     }
 
-    // Update category filter dropdown
     function updateCategoryFilter() {
         const current = categoryFilter.value;
         categoryFilter.innerHTML = '<option value="">All Categories</option>';
@@ -52,7 +48,6 @@
         });
     }
 
-    // Render skill cards
     function renderSkills(skills) {
         if (skills.length === 0) {
             skillList.innerHTML = '<div class="empty">No skills found</div>';
@@ -70,16 +65,26 @@
             </div>
         `).join('');
 
-        // Add click handlers
         document.querySelectorAll('.skill-card').forEach(card => {
             card.addEventListener('click', () => showSkillDetail(card.dataset.id));
         });
     }
 
-    // Show skill detail modal
     async function showSkillDetail(skillId) {
         try {
             const skill = await API.getSkill(skillId);
+            
+            // Fetch SKILL.md content
+            let skillMdContent = '';
+            try {
+                const mdResponse = await fetch(`/api/skills/${skillId}/files/SKILL.md`);
+                if (mdResponse.ok) {
+                    skillMdContent = await mdResponse.text();
+                }
+            } catch (e) {
+                // SKILL.md not available
+            }
+
             skillDetail.innerHTML = `
                 <h2>${escapeHtml(skill.display_name || skill.name)}</h2>
                 <p class="description">${escapeHtml(skill.description || 'No description available')}</p>
@@ -104,6 +109,17 @@
                     </div>
                 ` : ''}
 
+                ${skillMdContent ? `
+                    <div class="skill-content">
+                        <button class="collapse-toggle" onclick="this.parentElement.classList.toggle('collapsed')">
+                            <span class="collapse-icon">▼</span> SKILL.md Content
+                        </button>
+                        <div class="collapse-body">
+                            <pre><code>${escapeHtml(skillMdContent)}</code></pre>
+                        </div>
+                    </div>
+                ` : ''}
+
                 <div class="install-command">
                     <code>skillhub install ${escapeHtml(skill.name)}</code>
                     <button class="copy-btn" onclick="copyInstallCommand('${escapeHtml(skill.name)}')">Copy</button>
@@ -116,7 +132,6 @@
         }
     }
 
-    // Copy install command to clipboard
     window.copyInstallCommand = function(name) {
         const cmd = `skillhub install ${name}`;
         navigator.clipboard.writeText(cmd).then(() => {
@@ -128,31 +143,25 @@
         });
     };
 
-    // Setup event listeners
     function setupEventListeners() {
-        // Search
         searchBtn.addEventListener('click', performSearch);
         searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') performSearch();
         });
 
-        // Filters
         categoryFilter.addEventListener('change', performSearch);
         sortFilter.addEventListener('change', performSearch);
 
-        // Modal close
         modalClose.addEventListener('click', () => modal.classList.add('hidden'));
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.classList.add('hidden');
         });
 
-        // Escape key closes modal
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') modal.classList.add('hidden');
         });
     }
 
-    // Perform search with current filters
     function performSearch() {
         const query = searchInput.value.trim();
         const category = categoryFilter.value;
@@ -160,7 +169,6 @@
         loadSkills(query || undefined, category || undefined, sort);
     }
 
-    // Escape HTML to prevent XSS
     function escapeHtml(str) {
         if (!str) return '';
         const div = document.createElement('div');
@@ -168,6 +176,5 @@
         return div.innerHTML;
     }
 
-    // Start the app
     init();
 })();

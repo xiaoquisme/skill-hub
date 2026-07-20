@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="page-title">SkillHub - Hermes Agent Skills Registry</title>
+    <link rel="stylesheet" href="/ui/css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>SkillHub</h1>
+            <p class="tagline" id="tagline">Hermes Agent Skills Registry</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Search and Filter -->
+        <section class="search-section">
+            <div class="search-bar">
+                <input type="text" id="search-input" placeholder="Search skills..." autocomplete="off">
+                <button id="search-btn" class="btn btn-primary">Search</button>
+            </div>
+            <div class="filters">
+                <select id="category-filter">
+                    <option value="">All Categories</option>
+                </select>
+                <select id="sort-filter">
+                    <option value="updated_at">Recently Updated</option>
+                    <option value="created_at">Newest</option>
+                    <option value="name">Name (A-Z)</option>
+                </select>
+            </div>
+        </section>
+
+        <!-- Skill List -->
+        <section id="skill-list" class="skill-grid">
+            <div class="loading">Loading skills...</div>
+        </section>
+
+        <!-- Skill Detail Modal -->
+        <div id="skill-modal" class="modal hidden">
+            <div class="modal-content">
+                <button class="modal-close">&times;</button>
+                <div id="skill-detail"></div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p id="footer-text">SkillHub v0.1.0 — A lightweight skill registry for Hermes Agent</p>
+        </div>
+    </footer>
+
+    <script src="/ui/js/i18n.js"></script>
+    <script src="/ui/js/api.js"></script>
+    <script src="/ui/js/app.js"></script>
+</body>
+</html>

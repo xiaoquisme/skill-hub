@@ -35,15 +35,19 @@
     }
 
     async function init() {
-        applyI18n();
         await loadSkills();
         setupEventListeners();
 
-        // Re-apply i18n when translations finish loading
+        // Wait for translations to load before applying them
         document.addEventListener('i18n:ready', function() {
             applyI18n();
             renderSkills(allSkills);
         });
+
+        // If translations are already loaded, apply immediately
+        if (getLocale() && window.t('app.title') !== 'app.title') {
+            applyI18n();
+        }
     }
 
     async function loadSkills(query, category, sort) {

@@ -4,25 +4,50 @@
 (function() {
     'use strict';
 
-    const searchInput = document.getElementById('search-input');
-    const searchBtn = document.getElementById('search-btn');
-    const categoryFilter = document.getElementById('category-filter');
-    const sortFilter = document.getElementById('sort-filter');
-    const skillList = document.getElementById('skill-list');
-    const modal = document.getElementById('skill-modal');
-    const skillDetail = document.getElementById('skill-detail');
-    const modalClose = document.querySelector('.modal-close');
+    var searchInput = document.getElementById('search-input');
+    var searchBtn = document.getElementById('search-btn');
+    var categoryFilter = document.getElementById('category-filter');
+    var sortFilter = document.getElementById('sort-filter');
+    var skillList = document.getElementById('skill-list');
+    var modal = document.getElementById('skill-modal');
+    var skillDetail = document.getElementById('skill-detail');
+    var modalClose = document.querySelector('.modal-close');
 
-    let allSkills = [];
-    let categories = new Set();
+    var allSkills = [];
+    var categories = new Set();
+
+    function applyI18n() {
+        // Static HTML elements
+        document.getElementById('page-title').textContent = t('app.title');
+        document.getElementById('tagline').textContent = t('app.tagline');
+        document.getElementById('footer-text').textContent = t('app.footer');
+        searchInput.placeholder = t('search.placeholder');
+        searchBtn.textContent = t('search.btn');
+
+        // Filter options
+        var catOptions = categoryFilter.querySelectorAll('option');
+        if (catOptions.length > 0) catOptions[0].textContent = t('filter.all_categories');
+
+        var sortOptions = sortFilter.options;
+        sortOptions[0].textContent = t('filter.sort_updated');
+        sortOptions[1].textContent = t('filter.sort_created');
+        sortOptions[2].textContent = t('filter.sort_name');
+    }
 
     async function init() {
+        applyI18n();
         await loadSkills();
         setupEventListeners();
+
+        // Re-apply i18n when translations finish loading
+        document.addEventListener('i18n:ready', function() {
+            applyI18n();
+            renderSkills(allSkills);
+        });
     }
 
     async function loadSkills(query, category, sort) {
-        skillList.innerHTML = '<div class="loading">Loading skills...</div>';
+        skillList.innerHTML = '<div class="loading">' + t('loading.skills') + '</div>';
 
         try {
             allSkills = await API.listSkills({ query, category, sort });
@@ -30,17 +55,17 @@
             updateCategoryFilter();
             renderSkills(allSkills);
         } catch (err) {
-            skillList.innerHTML = '<div class="empty">Failed to load skills. Is the server running?</div>';
+            skillList.innerHTML = '<div class="empty">' + t('error.server') + '</div>';
             console.error('Failed to load skills:', err);
         }
     }
 
     function updateCategoryFilter() {
-        const current = categoryFilter.value;
-        categoryFilter.innerHTML = '<option value="">All Categories</option>';
+        var current = categoryFilter.value;
+        categoryFilter.innerHTML = '<option value="">' + t('filter.all_categories') + '</option>';
 
-        Array.from(categories).sort().forEach(cat => {
-            const option = document.createElement('option');
+        Array.from(categories).sort().forEach(function(cat) {
+            var option = document.createElement('option');
             option.value = cat;
             option.textContent = cat;
             if (cat === current) option.selected = true;
@@ -50,34 +75,34 @@
 
     function renderSkills(skills) {
         if (skills.length === 0) {
-            skillList.innerHTML = '<div class="empty">No skills found</div>';
+            skillList.innerHTML = '<div class="empty">' + t('empty.skills') + '</div>';
             return;
         }
 
-        skillList.innerHTML = skills.map(skill => `
-            <div class="skill-card" data-id="${skill.id}">
-                <h3>${escapeHtml(skill.display_name || skill.name)}</h3>
-                <p class="description">${escapeHtml(skill.description || 'No description')}</p>
-                <div class="meta">
-                    ${skill.category ? `<span class="category">${escapeHtml(skill.category)}</span>` : ''}
-                    ${(skill.tags || []).map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}
-                </div>
-            </div>
-        `).join('');
+        skillList.innerHTML = skills.map(function(skill) {
+            return '<div class="skill-card" data-id="' + skill.id + '">' +
+                '<h3>' + escapeHtml(skill.display_name || skill.name) + '</h3>' +
+                '<p class="description">' + escapeHtml(skill.description || t('skill.no_description')) + '</p>' +
+                '<div class="meta">' +
+                    (skill.category ? '<span class="category">' + escapeHtml(skill.category) + '</span>' : '') +
+                    (skill.tags || []).map(function(tag) { return '<span class="tag">' + escapeHtml(tag) + '</span>'; }).join('') +
+                '</div>' +
+            '</div>';
+        }).join('');
 
-        document.querySelectorAll('.skill-card').forEach(card => {
-            card.addEventListener('click', () => showSkillDetail(card.dataset.id));
+        document.querySelectorAll('.skill-card').forEach(function(card) {
+            card.addEventListener('click', function() { showSkillDetail(card.dataset.id); });
         });
     }
 
     async function showSkillDetail(skillId) {
         try {
-            const skill = await API.getSkill(skillId);
-            
+            var skill = await API.getSkill(skillId);
+
             // Fetch SKILL.md content
-            let skillMdContent = '';
+            var skillMdContent = '';
             try {
-                const mdResponse = await fetch(`/api/skills/${skillId}/files/SKILL.md`);
+                var mdResponse = await fetch('/api/skills/' + skillId + '/files/SKILL.md');
                 if (mdResponse.ok) {
                     skillMdContent = await mdResponse.text();
                 }
@@ -85,46 +110,50 @@
                 // SKILL.md not available
             }
 
-            skillDetail.innerHTML = `
-                <h2>${escapeHtml(skill.display_name || skill.name)}</h2>
-                <p class="description">${escapeHtml(skill.description || 'No description available')}</p>
+            var filesHtml = '';
+            if (skill.files && skill.files.length > 0) {
+                filesHtml = '<div class="file-list">' +
+                    '<h4>' + t('skill.detail.files') + ' (' + skill.files.length + ')</h4>' +
+                    '<ul>' +
+                        skill.files.map(function(f) { return '<li>' + escapeHtml(f.filename) + '</li>'; }).join('') +
+                    '</ul>' +
+                '</div>';
+            }
 
-                <dl class="metadata">
-                    <dt>Name</dt>
-                    <dd>${escapeHtml(skill.name)}</dd>
-                    ${skill.author ? `<dt>Author</dt><dd>${escapeHtml(skill.author)}</dd>` : ''}
-                    ${skill.category ? `<dt>Category</dt><dd>${escapeHtml(skill.category)}</dd>` : ''}
-                    ${skill.license ? `<dt>License</dt><dd>${escapeHtml(skill.license)}</dd>` : ''}
-                    ${(skill.tags || []).length > 0 ? `<dt>Tags</dt><dd>${skill.tags.map(t => escapeHtml(t)).join(', ')}</dd>` : ''}
-                    <dt>Updated</dt>
-                    <dd>${new Date(skill.updated_at).toLocaleDateString()}</dd>
-                </dl>
+            var mdHtml = '';
+            if (skillMdContent) {
+                mdHtml = '<div class="skill-content">' +
+                    '<button class="collapse-toggle" onclick="this.parentElement.classList.toggle(\'collapsed\')">' +
+                        '<span class="collapse-icon">▼</span> ' + t('skill.detail.skill_md') +
+                    '</button>' +
+                    '<div class="collapse-body">' +
+                        '<pre><code>' + escapeHtml(skillMdContent) + '</code></pre>' +
+                    '</div>' +
+                '</div>';
+            }
 
-                ${skill.files && skill.files.length > 0 ? `
-                    <div class="file-list">
-                        <h4>Files (${skill.files.length})</h4>
-                        <ul>
-                            ${skill.files.map(f => `<li>${escapeHtml(f.filename)}</li>`).join('')}
-                        </ul>
-                    </div>
-                ` : ''}
+            var authorHtml = skill.author ?
+                '<dt>' + t('skill.detail.author') + '</dt><dd>' + escapeHtml(skill.author) + '</dd>' : '';
+            var categoryHtml = skill.category ?
+                '<dt>' + t('skill.detail.category') + '</dt><dd>' + escapeHtml(skill.category) + '</dd>' : '';
+            var licenseHtml = skill.license ?
+                '<dt>' + t('skill.detail.license') + '</dt><dd>' + escapeHtml(skill.license) + '</dd>' : '';
+            var tagsHtml = (skill.tags || []).length > 0 ?
+                '<dt>' + t('skill.detail.tags') + '</dt><dd>' + skill.tags.map(function(t) { return escapeHtml(t); }).join(', ') + '</dd>' : '';
 
-                ${skillMdContent ? `
-                    <div class="skill-content">
-                        <button class="collapse-toggle" onclick="this.parentElement.classList.toggle('collapsed')">
-                            <span class="collapse-icon">▼</span> SKILL.md Content
-                        </button>
-                        <div class="collapse-body">
-                            <pre><code>${escapeHtml(skillMdContent)}</code></pre>
-                        </div>
-                    </div>
-                ` : ''}
-
-                <div class="install-command">
-                    <code>skillhub install ${escapeHtml(skill.name)}</code>
-                    <button class="copy-btn" onclick="copyInstallCommand('${escapeHtml(skill.name)}')">Copy</button>
-                </div>
-            `;
+            skillDetail.innerHTML =
+                '<h2>' + escapeHtml(skill.display_name || skill.name) + '</h2>' +
+                '<p class="description">' + escapeHtml(skill.description || t('skill.no_description_available')) + '</p>' +
+                '<dl class="metadata">' +
+                    '<dt>' + t('skill.detail.name') + '</dt><dd>' + escapeHtml(skill.name) + '</dd>' +
+                    authorHtml + categoryHtml + licenseHtml + tagsHtml +
+                    '<dt>' + t('skill.detail.updated') + '</dt><dd>' + new Date(skill.updated_at).toLocaleDateString() + '</dd>' +
+                '</dl>' +
+                filesHtml + mdHtml +
+                '<div class="install-command">' +
+                    '<code>skillhub install ' + escapeHtml(skill.name) + '</code>' +
+                    '<button class="copy-btn" onclick="copyInstallCommand(\'' + escapeHtml(skill.name) + '\')">' + t('skill.detail.copy') + '</button>' +
+                '</div>';
 
             modal.classList.remove('hidden');
         } catch (err) {
@@ -133,45 +162,45 @@
     }
 
     window.copyInstallCommand = function(name) {
-        const cmd = `skillhub install ${name}`;
-        navigator.clipboard.writeText(cmd).then(() => {
-            const btn = document.querySelector('.copy-btn');
+        var cmd = 'skillhub install ' + name;
+        navigator.clipboard.writeText(cmd).then(function() {
+            var btn = document.querySelector('.copy-btn');
             if (btn) {
-                btn.textContent = 'Copied!';
-                setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+                btn.textContent = t('skill.detail.copied');
+                setTimeout(function() { btn.textContent = t('skill.detail.copy'); }, 2000);
             }
         });
     };
 
     function setupEventListeners() {
         searchBtn.addEventListener('click', performSearch);
-        searchInput.addEventListener('keypress', (e) => {
+        searchInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') performSearch();
         });
 
         categoryFilter.addEventListener('change', performSearch);
         sortFilter.addEventListener('change', performSearch);
 
-        modalClose.addEventListener('click', () => modal.classList.add('hidden'));
-        modal.addEventListener('click', (e) => {
+        modalClose.addEventListener('click', function() { modal.classList.add('hidden'); });
+        modal.addEventListener('click', function(e) {
             if (e.target === modal) modal.classList.add('hidden');
         });
 
-        document.addEventListener('keydown', (e) => {
+        document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') modal.classList.add('hidden');
         });
     }
 
     function performSearch() {
-        const query = searchInput.value.trim();
-        const category = categoryFilter.value;
-        const sort = sortFilter.value;
+        var query = searchInput.value.trim();
+        var category = categoryFilter.value;
+        var sort = sortFilter.value;
         loadSkills(query || undefined, category || undefined, sort);
     }
 
     function escapeHtml(str) {
         if (!str) return '';
-        const div = document.createElement('div');
+        var div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;
     }

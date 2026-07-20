@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>构思：中文语言支持 — SkillHub</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --bg: #fafafa;
+            --surface: #ffffff;
+            --text: #1f2937;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --radius: 8px;
+            --accent-soft: #eef2ff;
+            --warn-soft: #fef3c7;
+            --success-soft: #ecfdf5;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.8;
+            font-size: 15px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header */
+        .doc-header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 40px 0 32px;
+            margin-bottom: 40px;
+        }
+
+        .doc-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .doc-header .meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .doc-header .meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .meta-label {
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        /* Stats strip */
+        .stats-strip {
+            display: flex;
+            gap: 24px;
+            padding: 20px 0;
+            margin-bottom: 32px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Sections */
+        section {
+            margin-bottom: 48px;
+        }
+
+        section h2 {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--primary);
+            color: var(--text);
+        }
+
+        section h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text);
+        }
+
+        p { margin-bottom: 12px; }
+
+        /* Jump list */
+        .jump-list {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 32px;
+        }
+
+        .jump-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .jump-list a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .jump-list a:hover {
+            text-decoration: underline;
+        }
+
+        .jump-list .axis-tag {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-left: 8px;
+        }
+
+        /* Idea cards */
+        .idea-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .idea-card h3 {
+            font-size: 18px;
+            margin-bottom: 12px;
+            color: var(--text);
+        }
+
+        .idea-card .description {
+            margin-bottom: 16px;
+            line-height: 1.8;
+        }
+
+        .idea-meta {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            gap: 8px 16px;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+
+        .idea-meta dt {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .idea-meta dd {
+            color: var(--text);
+        }
+
+        .basis-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .basis-direct {
+            background: var(--success-soft);
+            color: #065f46;
+        }
+
+        .basis-external {
+            background: var(--accent-soft);
+            color: #4338ca;
+        }
+
+        .basis-reasoned {
+            background: var(--warn-soft);
+            color: #92400e;
+        }
+
+        .confidence {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .conf-high {
+            background: var(--success-soft);
+            color: #065f46;
+        }
+
+        .conf-med {
+            background: var(--warn-soft);
+            color: #92400e;
+        }
+
+        .complexity {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            background: var(--bg);
+            color: var(--text-muted);
+        }
+
+        /* Rejection table */
+        .rejection-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .rejection-table th {
+            text-align: left;
+            padding: 10px 12px;
+            background: var(--bg);
+            border-bottom: 2px solid var(--border);
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .rejection-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .rejection-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Footer */
+        .composition-signal {
+            margin-top: 48px;
+            padding: 20px 0;
+            border-top: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .stats-strip {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .idea-meta {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="doc-header">
+        <div class="container">
+            <h1>构思：中文语言支持</h1>
+            <div class="meta">
+                <span><span class="meta-label">日期：</span>2026-07-20</span>
+                <span><span class="meta-label">主题：</span>chinese-language-support</span>
+                <span><span class="meta-label">焦点：</span>UI需要支持中文，而且默认是中文</span>
+                <span><span class="meta-label">模式：</span>repo-grounded</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Stats -->
+        <div class="stats-strip">
+            <div class="stat">
+                <div class="stat-value">15</div>
+                <div class="stat-label">原始候选</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">6</div>
+                <div class="stat-label">最终保留</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">5</div>
+                <div class="stat-label">主题轴</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">9</div>
+                <div class="stat-label">淘汰</div>
+            </div>
+        </div>
+
+        <!-- Grounding Context -->
+        <section id="grounding">
+            <h2>背景上下文</h2>
+            <p><strong>项目：</strong>SkillHub — 一个轻量级的、自托管的 Hermes Agent 技能注册中心</p>
+            <p><strong>技术栈：</strong>Python 3.10+, FastAPI 后端, 静态 HTML/CSS/JS 前端</p>
+            <p><strong>当前状态：</strong>所有 UI 文本均为硬编码英文（约30个Web UI字符串，约10个CLI字符串），无i18n库或翻译文件，<code>&lt;html lang="en"&gt;</code>硬编码。</p>
+            <p><strong>关键发现：</strong></p>
+            <ul style="margin-left: 20px; margin-bottom: 12px;">
+                <li>Web UI：单页应用，搜索、分类过滤、排序、技能列表（卡片）、技能详情弹窗</li>
+                <li>字体栈缺少显式 CJK 回退（Windows/Linux 上中文可能渲染不一致）</li>
+                <li>日期格式使用 <code>toLocaleDateString()</code> 但未指定中文区域</li>
+                <li>CLI（Click）：搜索、列表、推送、安装命令均为英文</li>
+                <li>代码库小（59行HTML，180行JS），i18n集成简单直接</li>
+            </ul>
+            <p><strong>范围约束：</strong>只做 Web UI 的中文化，CLI 不在范围内。</p>
+        </section>
+
+        <!-- Topic Axes -->
+        <section id="axes">
+            <h2>主题轴</h2>
+            <ol style="margin-left: 20px;">
+                <li><strong>UI文本提取与翻译</strong> — 提取所有硬编码英文字符串并创建中文翻译</li>
+                <li><strong>语言切换UX</strong> — 语言选择器、浏览器持久化、默认检测</li>
+                <li><strong>CJK文本渲染</strong> — 字体栈、排版、中文字符布局</li>
+                <li><strong>区域格式化</strong> — 中文区域的日期、数字、时间格式</li>
+                <li><del><strong>CLI国际化</strong> — Click命令帮助文本、错误消息、输出格式中文化</del> <em style="color:#9ca3af;font-size:12px;">（超出范围 — 只做Web UI）</em></li>
+            </ol>
+        </section>
+
+        <!-- Ranked Ideas -->
+        <section id="ideas">
+            <h2>排序构思</h2>
+
+            <ul class="jump-list">
+                <li><a href="#idea-1">1. 硬编码英文字符串无处不在</a> <span class="axis-tag">UI文本提取与翻译</span></li>
+                <li><a href="#idea-2">2. 字体栈缺少显式CJK回退</a> <span class="axis-tag">CJK文本渲染</span></li>
+                <li><a href="#idea-3">3. 从浏览器自动检测区域设置</a> <span class="axis-tag">语言切换UX</span></li>
+                <li><a href="#idea-4">4. 单一JSON翻译文件架构</a> <span class="axis-tag">UI文本提取与翻译</span></li>
+                <li><a href="#idea-5">5. 中文优先，零英文默认</a> <span class="axis-tag">语言切换UX</span></li>
+                <li><a href="#idea-6">6. 同时翻译技能元数据</a> <span class="axis-tag">UI文本提取与翻译</span></li>
+            </ul>
+
+            <!-- Idea 1 -->
+            <article class="idea-card" id="idea-1">
+                <h3>1. 硬编码英文字符串无处不在</h3>
+                <div class="description">
+                    <p>Web UI中的每个用户可见字符串（index.html + app.js）都是硬编码英文 — 搜索占位符、按钮标签、过滤器选项、加载状态、错误消息、元数据标签。中文用户看到"Search skills..."和"Loading skills..."却无法理解。</p>
+                </div>
+                <dl class="idea-meta">
+                    <dt>轴</dt>
+                    <dd>UI文本提取与翻译</dd>
+                    <dt>依据</dt>
+                    <dd><span class="basis-tag basis-direct">direct:</span> evidence-ui-text.md 列出了 index.html（第6-52行）和 app.js（第25-125行）中约30个硬编码字符串</dd>
+                    <dt>重要性</dt>
+                    <dd>这是最基本的障碍 — 不翻译这些字符串，中文用户完全无法使用UI</dd>
+                    <dt>会议测试</dt>
+                    <dd>是 — 团队必须决定如何提取和组织这些字符串</dd>
+                    <dt>置信度</dt>
+                    <dd><span class="confidence conf-high">85%</span></dd>
+                    <dt>复杂度</dt>
+                    <dd><span class="complexity">低</span></dd>
+                </dl>
+            </article>
+
+            <!-- Idea 2 -->
+            <article class="idea-card" id="idea-2">
+                <h3>2. 字体栈缺少显式CJK回退</h3>
+                <div class="description">
+                    <p>当前字体栈（<code>-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif</code>）在macOS上正常工作（PingFang SC是系统回退），但在Windows和Linux上，中文字符可能使用不一致或难以辨认的回退字体渲染。</p>
+                </div>
+                <dl class="idea-meta">
+                    <dt>轴</dt>
+                    <dd>CJK文本渲染</dd>
+                    <dt>依据</dt>
+                    <dd><span class="basis-tag basis-direct">direct:</span> style.css 第21行 — font-family属性。evidence-cjk-rendering.md 显示了Windows/Linux上的差距</dd>
+                    <dt>重要性</dt>
+                    <dd>渲染质量差会让中文UI感觉不专业且难以阅读，破坏整个本地化工作</dd>
+                    <dt>会议测试</dt>
+                    <dd>是 — 字体选择影响每次页面渲染</dd>
+                    <dt>置信度</dt>
+                    <dd><span class="confidence conf-med">75%</span></dd>
+                    <dt>复杂度</dt>
+                    <dd><span class="complexity">低</span></dd>
+                </dl>
+            </article>
+
+            <!-- Idea 3 -->
+            <article class="idea-card" id="idea-3">
+                <h3>3. 从浏览器自动检测区域设置</h3>
+                <div class="description">
+                    <p>不要构建语言切换器UI，而是自动检测浏览器的Accept-Language头部并提供适当的区域设置。中文用户的浏览器已经表明了他们的偏好。FastAPI可以原生读取Accept-Language头部。</p>
+                </div>
+                <dl class="idea-meta">
+                    <dt>轴</dt>
+                    <dd>语言切换UX</dd>
+                    <dt>依据</dt>
+                    <dd><span class="basis-tag basis-reasoned">reasoned:</span> 大多数中文用户的浏览器主语言是zh-CN。自动检测对90%的目标用户来说是零配置。</dd>
+                    <dt>重要性</dt>
+                    <dd>完全消除了语言切换的摩擦 — UI对中文用户直接可用</dd>
+                    <dt>会议测试</dt>
+                    <dd>是 — 自动检测 vs 手动切换器是重要的UX决策</dd>
+                    <dt>置信度</dt>
+                    <dd><span class="confidence conf-high">90%</span></dd>
+                    <dt>复杂度</dt>
+                    <dd><span class="complexity">中</span></dd>
+                </dl>
+            </article>
+
+            <!-- Idea 4 -->
+            <article class="idea-card" id="idea-4">
+                <h3>4. 单一JSON翻译文件架构</h3>
+                <div class="description">
+                    <p>不要将翻译分散在HTML和JS文件中，而是将所有字符串提取到一个 <code>locales/zh-CN.json</code> 文件中，将字符串键映射到中文值。JS在运行时从此文件读取。对于约30个字符串，一个文件完全够用。</p>
+                </div>
+                <dl class="idea-meta">
+                    <dt>轴</dt>
+                    <dd>UI文本提取与翻译</dd>
+                    <dt>依据</dt>
+                    <dd><span class="basis-tag basis-external">external:</span> 这是无框架vanilla JS i18n的标准模式（i18next等库使用此方法）。代码库只有2个JS文件共233行，一个文件即可管理。</dd>
+                    <dt>重要性</dt>
+                    <dd>将所有可翻译字符串集中在一个地方，使维护和未来添加语言变得简单</dd>
+                    <dt>会议测试</dt>
+                    <dd>是 — 团队必须决定翻译架构</dd>
+                    <dt>置信度</dt>
+                    <dd><span class="confidence conf-high">90%</span></dd>
+                    <dt>复杂度</dt>
+                    <dd><span class="complexity">低</span></dd>
+                </dl>
+            </article>
+
+            <!-- Idea 5 -->
+            <article class="idea-card" id="idea-5">
+                <h3>5. 中文优先，零英文默认</h3>
+                <div class="description">
+                    <p>将"中文作为默认"的要求推向极致：从默认UI中移除所有英文文本。英文成为需要明确选择加入的特殊情况，而不是中文覆盖的默认值。这迫使默认语言和辅助语言之间有干净的分离。</p>
+                </div>
+                <dl class="idea-meta">
+                    <dt>轴</dt>
+                    <dd>语言切换UX</dd>
+                    <dt>依据</dt>
+                    <dd><span class="basis-tag basis-reasoned">reasoned:</span> 用户明确说"默认是中文"。当前状态是100%英文。翻转默认值意味着中文是基线，英文仅在明确请求时加载。</dd>
+                    <dt>重要性</dt>
+                    <dd>确保中文体验是主要的、精心打磨的体验，而不是在英文上叠加的后续工作</dd>
+                    <dt>会议测试</dt>
+                    <dd>是 — 这是对"默认是中文"最极端的解释，值得讨论</dd>
+                    <dt>置信度</dt>
+                    <dd><span class="confidence conf-high">85%</span></dd>
+                    <dt>复杂度</dt>
+                    <dd><span class="complexity">低</span></dd>
+                </dl>
+            </article>
+
+            <!-- Idea 6 (renumbered from 7) -->
+            <article class="idea-card" id="idea-6">
+                <h3>6. 同时翻译技能元数据</h3>
+                <div class="description">
+                    <p>将翻译系统扩展到UI框架之外，涵盖技能描述、分类和标签。技能作者可以提供其技能元数据的中文翻译。如果UI是中文的，纯英文的技能描述会创造一种不协调的混合语言体验。</p>
+                </div>
+                <dl class="idea-meta">
+                    <dt>轴</dt>
+                    <dd>UI文本提取与翻译</dd>
+                    <dt>依据</dt>
+                    <dd><span class="basis-tag basis-reasoned">reasoned:</span> 技能描述显示在技能卡片和详情弹窗中（app.js 第60、90行）。混合语言体验会让用户感到不协调。</dd>
+                    <dt>重要性</dt>
+                    <dd>让整个体验在中文中感觉一致，而不仅仅是UI外壳</dd>
+                    <dt>会议测试</dt>
+                    <dd>是 — 影响数据模型的范围扩展</dd>
+                    <dt>置信度</dt>
+                    <dd><span class="confidence conf-med">75%</span></dd>
+                    <dt>复杂度</dt>
+                    <dd><span class="complexity">中</span></dd>
+                </dl>
+            </article>
+        </section>
+
+        <!-- Rejection Summary -->
+        <section id="rejections">
+            <h2>淘汰摘要</h2>
+            <table class="rejection-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>构思</th>
+                        <th>淘汰原因</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>6</td>
+                        <td>CLI作为主要中文界面</td>
+                        <td>超出范围 — 用户明确表示只做Web UI</td>
+                    </tr>
+                    <tr>
+                        <td>8</td>
+                        <td>Hermes生态共享模式</td>
+                        <td>相对于当前范围，成本过高</td>
+                    </tr>
+                    <tr>
+                        <td>9</td>
+                        <td>视频游戏本地化模式</td>
+                        <td>与#4（单一JSON文件）重复</td>
+                    </tr>
+                    <tr>
+                        <td>10</td>
+                        <td>微信小程序模式</td>
+                        <td>与#3（自动检测）+ #5（零英文）重复</td>
+                    </tr>
+                    <tr>
+                        <td>11</td>
+                        <td>设计支持100种语言</td>
+                        <td>相对于当前范围，成本过高</td>
+                    </tr>
+                    <tr>
+                        <td>12</td>
+                        <td>组合方案</td>
+                        <td>合并到最终综合方案中</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <footer class="composition-signal">
+        <div class="container">
+            Composed 2026-07-20T12:00Z by ce-ideate from <code>skillhub codebase exploration</code>
+        </div>
+    </footer>
+</body>
+</html>

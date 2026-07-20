@@ -55,7 +55,7 @@ async def get_skill(skill_id: str, db: Database = Depends(get_db)):
     files = await db.get_skill_files(skill_id)
 
     return SkillDetail(
-        **_skill_from_row(skill).model_dump(),
+        **_skill_from_row(skill).model_dump(exclude={"file_count"}),
         file_count=len(files),
         files=[
             SkillFileResponse(

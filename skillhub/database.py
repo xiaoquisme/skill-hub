@@ -32,13 +32,6 @@ CREATE TABLE IF NOT EXISTS skill_files (
     size_bytes INTEGER,
     UNIQUE(skill_id, filename)
 );
-
-CREATE TABLE IF NOT EXISTS api_tokens (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    token_hash TEXT NOT NULL UNIQUE,
-    owner_name TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
 """
 
 ALLOWED_SORT_FIELDS = {"created_at", "updated_at", "name", "category"}
@@ -208,38 +201,3 @@ class Database:
             "DELETE FROM skill_files WHERE skill_id = ?", (skill_id,)
         )
         await self.conn.commit()
-
-    # --- API Tokens ---
-
-    async def create_token(self, token_hash: str, owner_name: Optional[str] = None) -> dict:
-        await self.conn.execute(
-            "INSERT INTO api_tokens (token_hash, owner_name) VALUES (?, ?)",
-            (token_hash, owner_name),
-        )
-        await self.conn.commit()
-        async with self.conn.execute(
-            "SELECT * FROM api_tokens WHERE token_hash = ?", (token_hash,)
-        ) as cursor:
-            row = await cursor.fetchone()
-            return dict(row) if row else {}
-
-    async def validate_token(self, token_hash: str) -> Optional[dict]:
-        async with self.conn.execute(
-            "SELECT 1 FROM api_tokens WHERE token_hash = ?", (token_hash,)
-        ) as cursor:
-            row = await cursor.fetchone()
-            return dict(row) if row else None
-
-    async def delete_token(self, token_id: int) -> bool:
-        async with self.conn.execute(
-            "DELETE FROM api_tokens WHERE id = ?", (token_id,)
-        ) as cursor:
-            await self.conn.commit()
-            return cursor.rowcount > 0
-
-    async def list_tokens(self) -> list[dict]:
-        async with self.conn.execute(
-            "SELECT * FROM api_tokens ORDER BY created_at DESC"
-        ) as cursor:
-            rows = await cursor.fetchall()
-            return [dict(row) for row in rows]

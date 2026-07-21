@@ -17,9 +17,7 @@ uvicorn skillhub.main:app --reload
 ```
 
 ### Publish a skill
-
 ```bash
-skillhub auth login
 skillhub push ./my-skill/
 ```
 

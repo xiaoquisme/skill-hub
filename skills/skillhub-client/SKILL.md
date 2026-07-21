@@ -27,7 +27,7 @@ Use this skill when:
 Install the SkillHub CLI from the GitHub repo:
 
 ```bash
-pip install git+https://github.com/xiaoquisme/skillhub.git
+uv tool install git+https://github.com/xiaoquisme/skill-hub.git
 ```
 
 After installation, the `skillhub` command is available globally.

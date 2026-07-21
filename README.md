@@ -2,38 +2,60 @@
 
 A lightweight, self-hosted skill registry for Hermes Agent skills.
 
-## Installation
+## Quick Start (Server)
+
+Deploy SkillHub with Docker:
 
 ```bash
-pip install skillhub
+git clone https://github.com/xiaoquisme/skillhub.git
+cd skillhub
+./quickstart.sh
 ```
 
-## Quick Start
+Open http://localhost/ui/ in your browser.
 
-### Start the server
+### Or run locally
 
 ```bash
+pip install -e .
 uvicorn skillhub.main:app --reload
 ```
 
-### Publish a skill
+## Client CLI
+
+Install the CLI to push and install skills from a SkillHub server:
+
 ```bash
-skillhub push ./my-skill/
+pip install git+https://github.com/xiaoquisme/skillhub.git
 ```
 
-### Browse skills
+### Configure the server
 
-Open http://localhost:8000 in your browser.
+Create `~/.skillhub/config.yaml`:
 
-### Install a skill
+```yaml
+registry_url: http://<server-host>:80
+```
+
+### Usage
 
 ```bash
+# Publish a skill
+skillhub push ./my-skill/
+
+# Install a skill
 skillhub install skill-name
+
+# Search skills
+skillhub search keyword
+
+# List available skills
+skillhub list
 ```
 
 ## Configuration
 
-Configuration is stored in `~/.skillhub/config.yaml`:
+Server configuration is stored in `~/.skillhub/config.yaml`:
 
 ```yaml
 server:
@@ -43,6 +65,15 @@ storage:
   data_dir: ~/.skillhub/data
   skills_dir: ~/.skillhub/skills
 ```
+
+Environment variables override YAML values:
+
+| Variable | Overrides |
+|----------|-----------|
+| `SKILLHUB_HOST` | `server.host` |
+| `SKILLHUB_PORT` | `server.port` |
+| `SKILLHUB_DATA_DIR` | `storage.data_dir` |
+| `SKILLHUB_SKILLS_DIR` | `storage.skills_dir` |
 
 ## Development
 

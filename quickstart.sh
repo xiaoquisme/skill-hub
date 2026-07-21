@@ -35,9 +35,9 @@ echo ""
 echo "Starting SkillHub..."
 docker compose up -d
 
-# Wait for service to be ready
+# Wait for service to be ready (through nginx proxy)
 echo "Waiting for SkillHub to be ready..."
-PORT="${SKILLHUB_PORT:-8000}"
+PORT="${SKILLHUB_PORT:-80}"
 RETRIES=0
 MAX_RETRIES=30
 while [ $RETRIES -lt $MAX_RETRIES ]; do

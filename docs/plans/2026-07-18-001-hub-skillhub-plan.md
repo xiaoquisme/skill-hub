@@ -68,7 +68,7 @@ A public skill registry where authors publish Hermes skills with one CLI command
 
 - Author can publish a skill from local machine with `skillhub push ./my-skill/`
 - Consumer can install a skill with `skillhub install skill-name`
-- Consumer can browse all skills at `http://localhost:8000`
+- Consumer can browse all skills at `http://localhost/ui/`
 - Consumer can search skills by keyword via Web UI or CLI
 - Skill files (SKILL.md + references) are stored and served correctly
 

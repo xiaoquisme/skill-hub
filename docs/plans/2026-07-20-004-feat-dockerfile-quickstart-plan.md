@@ -254,7 +254,7 @@ else
 fi
 
 echo ""
-echo "Web UI: http://localhost:${PORT}"
+echo "Web UI: http://localhost:${PORT}/ui/"
 echo "API docs: http://localhost:${PORT}/docs"
 echo ""
 echo "To stop: docker compose down"
@@ -270,7 +270,7 @@ echo "To view logs: docker compose logs -f"
 
 **Verification:**
 - `./quickstart.sh` builds and starts SkillHub successfully
-- Web UI is accessible at http://localhost:8000
+- Web UI is accessible at http://localhost:8000/ui/
 - Data persists after `docker compose down && docker compose up -d`
 - `docker compose logs` shows no errors
 

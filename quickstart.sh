@@ -55,7 +55,7 @@ else
 fi
 
 echo ""
-echo "Web UI: http://localhost:${PORT}"
+echo "Web UI: http://localhost:${PORT}/ui/"
 echo "API docs: http://localhost:${PORT}/docs"
 echo ""
 echo "To stop: docker compose down"

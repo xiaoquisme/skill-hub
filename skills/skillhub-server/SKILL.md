@@ -33,7 +33,7 @@ Use this skill when:
 The fastest way to get running:
 
 ```bash
-git clone https://github.com/xiaoquisme/skillhub.git
+git clone https://github.com/xiaoquisme/skill-hub.git
 cd skillhub
 ./quickstart.sh
 ```
@@ -84,7 +84,7 @@ Run without Docker:
 
 ```bash
 # Clone and install
-git clone https://github.com/xiaoquisme/skillhub.git
+git clone https://github.com/xiaoquisme/skill-hub.git
 cd skillhub
 pip install -e .
 

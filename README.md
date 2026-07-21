@@ -7,7 +7,7 @@ A lightweight, self-hosted skill registry for Hermes Agent skills.
 Deploy SkillHub with Docker:
 
 ```bash
-git clone https://github.com/xiaoquisme/skillhub.git
+git clone https://github.com/xiaoquisme/skill-hub.git
 cd skillhub
 ./quickstart.sh
 ```
@@ -26,7 +26,7 @@ uvicorn skillhub.main:app --reload
 Install the CLI to push and install skills from a SkillHub server:
 
 ```bash
-uv tool install git+https://github.com/xiaoquisme/skillhub.git
+uv tool install git+https://github.com/xiaoquisme/skill-hub.git
 ```
 
 ### Configure the server

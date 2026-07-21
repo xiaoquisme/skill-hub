@@ -26,7 +26,7 @@ uvicorn skillhub.main:app --reload
 Install the CLI to push and install skills from a SkillHub server:
 
 ```bash
-pip install git+https://github.com/xiaoquisme/skillhub.git
+uv tool install git+https://github.com/xiaoquisme/skillhub.git
 ```
 
 ### Configure the server

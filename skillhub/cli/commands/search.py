@@ -5,7 +5,6 @@ import httpx
 
 from skillhub.config import load_config
 
-
 @click.command()
 @click.argument("query")
 @click.option("--category", "-c", help="Filter by category")
@@ -40,6 +39,7 @@ def search(query: str, category: str, limit: int, server: str):
             desc = skill.get("description", "No description")[:60]
             cat = skill.get("category", "")
             tags = skill.get("tags", [])
+            downloads = skill.get("download_count", 0)
 
             click.echo(f"  {name}")
             click.echo(f"    {desc}")
@@ -47,4 +47,6 @@ def search(query: str, category: str, limit: int, server: str):
                 click.echo(f"    Category: {cat}")
             if tags:
                 click.echo(f"    Tags: {', '.join(tags)}")
+            if downloads:
+                click.echo(f"    Downloads: {downloads}")
             click.echo()

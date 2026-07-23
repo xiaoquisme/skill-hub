@@ -8,7 +8,6 @@ from typing import Optional
 
 import aiosqlite
 
-
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS skills (
     id TEXT PRIMARY KEY,
@@ -21,7 +20,8 @@ CREATE TABLE IF NOT EXISTS skills (
     license TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    published_by TEXT
+    published_by TEXT,
+    download_count INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS skill_files (
@@ -34,11 +34,9 @@ CREATE TABLE IF NOT EXISTS skill_files (
 );
 """
 
-ALLOWED_SORT_FIELDS = {"created_at", "updated_at", "name", "category"}
-
+ALLOWED_SORT_FIELDS = {"created_at", "updated_at", "name", "category", "download_count"}
 
 class Database:
-
     def __init__(self, db_path: Path):
         self.db_path = db_path
         self._conn: Optional[aiosqlite.Connection] = None
@@ -50,6 +48,15 @@ class Database:
         await self._conn.executescript(SCHEMA)
         await self._conn.execute("PRAGMA foreign_keys = ON")
         await self._conn.commit()
+
+        # Migration: add download_count column to existing databases
+        try:
+            await self._conn.execute(
+                "ALTER TABLE skills ADD COLUMN download_count INTEGER DEFAULT 0"
+            )
+            await self._conn.commit()
+        except Exception:
+            pass  # Column already exists
 
     async def close(self) -> None:
         if self._conn:
@@ -199,5 +206,13 @@ class Database:
     async def delete_skill_files(self, skill_id: str) -> None:
         await self.conn.execute(
             "DELETE FROM skill_files WHERE skill_id = ?", (skill_id,)
+        )
+        await self.conn.commit()
+
+    async def increment_download_count(self, skill_id: str) -> None:
+        """Atomically increment the download count for a skill."""
+        await self.conn.execute(
+            "UPDATE skills SET download_count = download_count + 1 WHERE id = ?",
+            (skill_id,),
         )
         await self.conn.commit()

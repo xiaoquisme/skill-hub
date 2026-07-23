@@ -84,7 +84,6 @@ async def download_skill_file(
     if not file_path:
         raise HTTPException(status_code=404, detail="File not found")
 
-    # Track download
     await db.increment_download_count(skill_id)
 
     return FileResponse(

@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS skill_files (
 
 ALLOWED_SORT_FIELDS = {"created_at", "updated_at", "name", "category", "download_count"}
 
+
 class Database:
     def __init__(self, db_path: Path):
         self.db_path = db_path
@@ -55,7 +56,7 @@ class Database:
                 "ALTER TABLE skills ADD COLUMN download_count INTEGER DEFAULT 0"
             )
             await self._conn.commit()
-        except Exception:
+        except aiosqlite.OperationalError:
             pass  # Column already exists
 
     async def close(self) -> None:

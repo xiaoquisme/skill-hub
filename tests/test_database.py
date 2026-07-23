@@ -2,12 +2,10 @@
 
 import tempfile
 from pathlib import Path
-
 import pytest
 import pytest_asyncio
 
 from skillhub.database import Database
-
 
 @pytest_asyncio.fixture
 async def db():
@@ -34,6 +32,7 @@ async def test_create_skill(db):
     assert skill["name"] == "test-skill"
     assert skill["display_name"] == "Test Skill"
     assert "id" in skill
+    assert skill["download_count"] == 0
 
 
 @pytest.mark.asyncio
@@ -128,3 +127,59 @@ async def test_skill_files(db):
     await db.delete_skill_files(skill["id"])
     files = await db.get_skill_files(skill["id"])
     assert len(files) == 0
+
+
+@pytest.mark.asyncio
+async def test_download_count_starts_at_zero(db):
+    """Test that new skills start with download_count = 0."""
+    skill = await db.create_skill(name="fresh-skill")
+    fetched = await db.get_skill(skill["id"])
+    assert fetched["download_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_increment_download_count(db):
+    """Test that increment_download_count increases count by 1."""
+    skill = await db.create_skill(name="counted-skill")
+    await db.increment_download_count(skill["id"])
+
+    fetched = await db.get_skill(skill["id"])
+    assert fetched["download_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_increment_download_count_twice(db):
+    """Test that incrementing twice yields count = 2."""
+    skill = await db.create_skill(name="double-skill")
+    await db.increment_download_count(skill["id"])
+    await db.increment_download_count(skill["id"])
+
+    fetched = await db.get_skill(skill["id"])
+    assert fetched["download_count"] == 2
+
+
+@pytest.mark.asyncio
+async def test_increment_download_count_nonexistent_skill(db):
+    """Test that incrementing a non-existent skill is a no-op."""
+    # Should not raise an error
+    await db.increment_download_count("nonexistent-id")
+    # Verify no skill was created
+    assert await db.get_skill("nonexistent-id") is None
+
+
+@pytest.mark.asyncio
+async def test_list_skills_sort_by_downloads(db):
+    """Test listing skills sorted by download count."""
+    skill_a = await db.create_skill(name="popular")
+    skill_b = await db.create_skill(name="unpopular")
+
+    # popular gets 5 downloads, unpopular gets 1
+    for _ in range(5):
+        await db.increment_download_count(skill_a["id"])
+    await db.increment_download_count(skill_b["id"])
+
+    skills = await db.list_skills(sort="download_count")
+    assert skills[0]["name"] == "popular"
+    assert skills[0]["download_count"] == 5
+    assert skills[1]["name"] == "unpopular"
+    assert skills[1]["download_count"] == 1

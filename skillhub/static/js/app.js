@@ -126,7 +126,7 @@
 
             var mdHtml = '';
             if (skillMdContent) {
-                mdHtml = '<div class="skill-content">' +
+                mdHtml = '<div class="skill-content collapsed">' +
                     '<button class="collapse-toggle" onclick="this.parentElement.classList.toggle(\'collapsed\')">' +
                         '<span class="collapse-icon">▼</span> ' + t('skill.detail.skill_md') +
                     '</button>' +

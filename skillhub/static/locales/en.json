@@ -5,6 +5,7 @@
   "search.placeholder": "Search skills...",
   "search.btn": "Search",
   "filter.all_categories": "All Categories",
+  "filter.sort_downloads": "Most Downloads",
   "filter.sort_updated": "Recently Updated",
   "filter.sort_created": "Newest",
   "filter.sort_name": "Name (A-Z)",

@@ -2,9 +2,7 @@
 
 from datetime import datetime
 from typing import Optional
-
 from pydantic import BaseModel, Field
-
 
 class SkillBase(BaseModel):
     name: str
@@ -26,6 +24,7 @@ class SkillResponse(SkillBase):
     updated_at: datetime
     published_by: Optional[str] = None
     file_count: int = 0
+    download_count: int = 0
 
 
 class SkillDetail(SkillResponse):
@@ -36,6 +35,5 @@ class SkillFileResponse(BaseModel):
     filename: str
     content_type: str = "text/markdown"
     size_bytes: Optional[int] = None
-
 
 SkillDetail.model_rebuild()

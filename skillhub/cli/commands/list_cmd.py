@@ -5,7 +5,6 @@ import httpx
 
 from skillhub.config import load_config
 
-
 @click.command(name="list")
 @click.option("--category", "-c", help="Filter by category")
 @click.option("--limit", "-n", default=50, help="Max results")
@@ -45,5 +44,7 @@ def list_skills(category: str, limit: int, server: str):
             for skill in cat_skills:
                 name = skill["name"]
                 desc = skill.get("description", "")[:50]
-                click.echo(f"    {name} - {desc}")
+                downloads = skill.get("download_count", 0)
+                suffix = f" ({downloads} downloads)" if downloads else ""
+                click.echo(f"    {name} - {desc}{suffix}")
             click.echo()

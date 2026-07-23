@@ -28,6 +28,7 @@ def _skill_from_row(row: dict) -> SkillResponse:
         created_at=row["created_at"],
         updated_at=row["updated_at"],
         published_by=row.get("published_by"),
+        download_count=row.get("download_count", 0),
     )
 
 
@@ -82,6 +83,9 @@ async def download_skill_file(
     file_path = storage.get_skill_file_path(skill_id, filename)
     if not file_path:
         raise HTTPException(status_code=404, detail="File not found")
+
+    # Track download
+    await db.increment_download_count(skill_id)
 
     return FileResponse(
         path=str(file_path),

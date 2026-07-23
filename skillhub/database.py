@@ -56,8 +56,9 @@ class Database:
                 "ALTER TABLE skills ADD COLUMN download_count INTEGER DEFAULT 0"
             )
             await self._conn.commit()
-        except aiosqlite.OperationalError:
-            pass  # Column already exists
+        except aiosqlite.OperationalError as e:
+            if "duplicate column" not in str(e):
+                raise
 
     async def close(self) -> None:
         if self._conn:

@@ -1,5 +1,6 @@
 __pycache__/
 *.py[cod]
+*.pyo
 *.egg-info/
 dist/
 build/
@@ -7,6 +8,24 @@ build/
 *.db
 *.sqlite
 .env
+
+# macOS
+.DS_Store
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing / Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Ruff / Lint
+.ruff_cache/
 
 # Compound Engineering local config
 .compound-engineering/*.local.yaml

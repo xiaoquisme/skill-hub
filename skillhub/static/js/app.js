@@ -194,11 +194,7 @@
         try {
             await API.deleteSkill(skillId);
             modal.classList.add('hidden');
-            loadSkills(
-                searchInput.value.trim() || undefined,
-                categoryFilter.value || undefined,
-                sortFilter.value
-            );
+            performSearch();
         } catch (err) {
             console.error('Failed to delete skill:', err);
             alert(t('skill.detail.delete_error'));

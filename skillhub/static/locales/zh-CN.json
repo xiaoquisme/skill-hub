@@ -23,5 +23,8 @@
   "skill.detail.files": "文件",
   "skill.detail.skill_md": "SKILL.md 内容",
   "skill.detail.copy": "复制",
-  "skill.detail.copied": "已复制!"
+  "skill.detail.copied": "已复制!",
+  "skill.detail.delete": "删除",
+  "skill.detail.delete_confirm": "确定要删除此技能吗？",
+  "skill.detail.delete_error": "删除技能失败，请重试。"
 }

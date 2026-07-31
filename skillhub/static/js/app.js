@@ -158,9 +158,19 @@
                 '<div class="install-command">' +
                     '<code>skillhub install ' + escapeHtml(skill.name) + '</code>' +
                     '<button class="copy-btn" onclick="copyInstallCommand(\'' + escapeHtml(skill.name) + '\')">' + t('skill.detail.copy') + '</button>' +
+                '</div>' +
+                '<div class="delete-section">' +
+                    '<button class="btn btn-danger btn-sm delete-skill-btn">' + t('skill.detail.delete') + '</button>' +
                 '</div>';
 
             modal.classList.remove('hidden');
+
+            var deleteBtn = skillDetail.querySelector('.delete-skill-btn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', function() {
+                    window.confirmDeleteSkill(skill.id, skill.display_name || skill.name);
+                });
+            }
         } catch (err) {
             console.error('Failed to load skill detail:', err);
         }
@@ -175,6 +185,24 @@
                 setTimeout(function() { btn.textContent = t('skill.detail.copy'); }, 2000);
             }
         });
+    };
+
+    window.confirmDeleteSkill = async function(skillId, skillName) {
+        var message = t('skill.detail.delete_confirm') + '\n\n' + skillName;
+        if (!confirm(message)) return;
+
+        try {
+            await API.deleteSkill(skillId);
+            modal.classList.add('hidden');
+            loadSkills(
+                searchInput.value.trim() || undefined,
+                categoryFilter.value || undefined,
+                sortFilter.value
+            );
+        } catch (err) {
+            console.error('Failed to delete skill:', err);
+            alert(t('skill.detail.delete_error'));
+        }
     };
 
     function setupEventListeners() {

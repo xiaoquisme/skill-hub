@@ -40,6 +40,10 @@ const API = {
         return this.request(`/api/skills/${id}`);
     },
 
+    async deleteSkill(id) {
+        return this.request(`/api/skills/${id}`, { method: 'DELETE' });
+    },
+
     async getSkillFile(skillId, filename) {
         const url = `${this.baseUrl}/api/skills/${skillId}/files/${encodeURIComponent(filename)}`;
         const response = await fetch(url);

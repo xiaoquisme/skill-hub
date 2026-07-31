@@ -29,9 +29,10 @@
         if (catOptions.length > 0) catOptions[0].textContent = t('filter.all_categories');
 
         var sortOptions = sortFilter.options;
-        sortOptions[0].textContent = t('filter.sort_updated');
-        sortOptions[1].textContent = t('filter.sort_created');
-        sortOptions[2].textContent = t('filter.sort_name');
+        sortOptions[0].textContent = t('filter.sort_downloads');
+        sortOptions[1].textContent = t('filter.sort_updated');
+        sortOptions[2].textContent = t('filter.sort_created');
+        sortOptions[3].textContent = t('filter.sort_name');
     }
 
     async function init() {

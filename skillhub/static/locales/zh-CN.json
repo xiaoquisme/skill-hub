@@ -5,6 +5,7 @@
   "search.placeholder": "搜索技能...",
   "search.btn": "搜索",
   "filter.all_categories": "所有分类",
+  "filter.sort_downloads": "最多下载",
   "filter.sort_updated": "最近更新",
   "filter.sort_created": "最新",
   "filter.sort_name": "名称 (A-Z)",

@@ -23,5 +23,8 @@
   "skill.detail.files": "Files",
   "skill.detail.skill_md": "SKILL.md Content",
   "skill.detail.copy": "Copy",
-  "skill.detail.copied": "Copied!"
+  "skill.detail.copied": "Copied!",
+  "skill.detail.delete": "Delete",
+  "skill.detail.delete_confirm": "Are you sure you want to delete this skill?",
+  "skill.detail.delete_error": "Failed to delete the skill. Please try again."
 }

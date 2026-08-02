@@ -141,6 +141,82 @@ async def test_skill_response_includes_download_count():
 
 
 @pytest.mark.asyncio
+async def test_delete_skill():
+    """Test DELETE /api/skills/{id} returns 204 and removes the skill."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        storage = SkillStorage(test_config.storage.skills_dir)
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+        deps._storage = storage
+
+        # Create a skill
+        skill = await test_db.create_skill(
+            name="deletable-skill",
+            display_name="Deletable Skill",
+            description="A skill to be deleted",
+            category="testing",
+        )
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            # Delete the skill
+            response = await client.delete(f"/api/skills/{skill['id']}")
+            assert response.status_code == 204
+
+            # Verify it's gone via GET
+            response = await client.get(f"/api/skills/{skill['id']}")
+            assert response.status_code == 404
+
+            # Verify it's absent from the list
+            response = await client.get("/api/skills")
+            assert response.status_code == 200
+            skills = response.json()
+            assert all(s["id"] != skill["id"] for s in skills)
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None
+        deps._storage = None
+
+
+@pytest.mark.asyncio
+async def test_delete_skill_not_found():
+    """Test DELETE /api/skills/{nonexistent} returns 404."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.delete("/api/skills/nonexistent-id")
+            assert response.status_code == 404
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None
+
+
+@pytest.mark.asyncio
 async def test_download_increments_count():
     """Test that downloading a file increments the skill's download_count."""
     with tempfile.TemporaryDirectory() as tmpdir:

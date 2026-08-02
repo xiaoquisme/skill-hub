@@ -385,6 +385,22 @@ footer {
     font-size: 14px;
 }
 
+/* Delete Button */
+.delete-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
     .search-bar {

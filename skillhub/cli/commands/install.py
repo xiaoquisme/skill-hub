@@ -15,7 +15,8 @@ from skillhub.targets import registry, TargetScope
 @click.option("--scope", "-s", default=None, type=click.Choice(["user", "project"]), help="Installation scope")
 @click.option("--category", "-c", default=None, help="Category subdirectory (Hermes only)")
 @click.option("--server", default=None, help="Override registry server URL")
-def install(name: str, target: str, scope: str, category: str, server: str):
+@click.option("--yes", "-y", is_flag=True, default=False, help="Auto-confirm overwrites")
+def install(name: str, target: str, scope: str, category: str, server: str, yes: bool):
     """Install a skill from the registry to a target platform directory."""
     config = load_config()
     registry_url = server or config.registry_url
@@ -88,7 +89,7 @@ def install(name: str, target: str, scope: str, category: str, server: str):
 
         if install_dir.exists():
             click.echo(f"  Skill already exists at {install_dir}")
-            if not click.confirm("Overwrite?"):
+            if not yes and not click.confirm("Overwrite?"):
                 click.echo("Aborted.")
                 return
 

@@ -81,7 +81,7 @@ async def get_skill(skill_id: str, db: Database = Depends(get_db), storage: Skil
     platforms = _extract_platforms_from_skillmd(skill_id, storage)
 
     return SkillDetail(
-        **_skill_from_row(skill).model_dump(exclude={"file_count"}),
+        **_skill_from_row(skill).model_dump(exclude={"file_count", "targets"}),
         file_count=len(files),
         files=[
             SkillFileResponse(

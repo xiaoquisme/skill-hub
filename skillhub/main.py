@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from skillhub.api.deps import get_config, get_db, get_storage
 from skillhub.api.skills import router as skills_router
+from skillhub.api.targets import router as targets_router
 
 
 @asynccontextmanager
@@ -42,6 +43,7 @@ async def health():
 
 
 app.include_router(skills_router)
+app.include_router(targets_router)
 
 static_dir = Path(__file__).parent / "static"
 if static_dir.exists():

@@ -25,6 +25,7 @@ class SkillResponse(SkillBase):
     published_by: Optional[str] = None
     file_count: int = 0
     download_count: int = 0
+    targets: list[str] = Field(default_factory=lambda: ["hermes"])
 
 
 class SkillDetail(SkillResponse):

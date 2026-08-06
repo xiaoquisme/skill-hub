@@ -146,6 +146,18 @@
             var tagsHtml = (skill.tags || []).length > 0 ?
                 '<dt>' + t('skill.detail.tags') + '</dt><dd>' + skill.tags.map(function(t) { return escapeHtml(t); }).join(', ') + '</dd>' : '';
 
+            var targets = skill.targets || ['hermes'];
+            var targetBadgesHtml = targets.map(function(target) {
+                return '<span class="target-badge target-' + target + '">' + escapeHtml(target) + '</span>';
+            }).join('');
+            var installCommandsHtml = targets.map(function(target) {
+                var cmd = 'skillhub install ' + skill.name + ' --target ' + target;
+                return '<div class="install-command">' +
+                    '<code>' + escapeHtml(cmd) + '</code>' +
+                    '<button class="copy-btn" onclick="copyToClipboard(this, \'' + cmd.replace(/'/g, "\\'") + '\')">' + t('skill.detail.copy') + '</button>' +
+                '</div>';
+            }).join('');
+
             skillDetail.innerHTML =
                 '<h2>' + escapeHtml(skill.display_name || skill.name) + '</h2>' +
                 '<p class="description">' + escapeHtml(skill.description || t('skill.no_description_available')) + '</p>' +
@@ -155,9 +167,10 @@
                     '<dt>' + t('skill.detail.updated') + '</dt><dd>' + formatDate(skill.updated_at) + '</dd>' +
                 '</dl>' +
                 filesHtml + mdHtml +
-                '<div class="install-command">' +
-                    '<code>skillhub install ' + escapeHtml(skill.name) + '</code>' +
-                    '<button class="copy-btn" onclick="copyInstallCommand(\'' + escapeHtml(skill.name) + '\')">' + t('skill.detail.copy') + '</button>' +
+                '<div class="target-section">' +
+                    '<h4>' + t('skill.detail.targets') + '</h4>' +
+                    '<div class="target-badges">' + targetBadgesHtml + '</div>' +
+                    '<div class="install-commands">' + installCommandsHtml + '</div>' +
                 '</div>' +
                 '<div class="delete-section">' +
                     '<button class="btn btn-danger btn-sm delete-skill-btn">' + t('skill.detail.delete') + '</button>' +
@@ -176,15 +189,17 @@
         }
     }
 
-    window.copyInstallCommand = function(name) {
-        var cmd = 'skillhub install ' + name;
-        navigator.clipboard.writeText(cmd).then(function() {
-            var btn = document.querySelector('.copy-btn');
-            if (btn) {
-                btn.textContent = t('skill.detail.copied');
-                setTimeout(function() { btn.textContent = t('skill.detail.copy'); }, 2000);
-            }
+    window.copyToClipboard = function(btn, text) {
+        navigator.clipboard.writeText(text).then(function() {
+            var original = btn.textContent;
+            btn.textContent = t('skill.detail.copied');
+            setTimeout(function() { btn.textContent = original; }, 2000);
         });
+    };
+
+    // Keep old function for backward compat
+    window.copyInstallCommand = function(name) {
+        copyToClipboard(document.querySelector('.copy-btn'), 'skillhub install ' + name);
     };
 
     window.confirmDeleteSkill = async function(skillId, skillName) {
@@ -237,6 +252,26 @@
     function formatDate(isoString) {
         if (!isoString) return '';
         return isoString.slice(0, 10);
+    }
+
+    function parseFrontmatter(content) {
+        var match = content.match(/^---\n([\s\S]*?)\n---/);
+        if (!match) return {};
+        var result = {};
+        var lines = match[1].split('\n');
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+            var colonIdx = line.indexOf(':');
+            if (colonIdx === -1) continue;
+            var key = line.substring(0, colonIdx).trim();
+            var value = line.substring(colonIdx + 1).trim();
+            // Handle arrays like [hermes, claude-code]
+            if (value.startsWith('[') && value.endsWith(']')) {
+                value = value.slice(1, -1).split(',').map(function(s) { return s.trim(); });
+            }
+            result[key] = value;
+        }
+        return result;
     }
 
     init();

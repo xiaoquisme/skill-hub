@@ -13,6 +13,7 @@ from skillhub.targets.hermes import HermesAdapter
 from skillhub.targets.claude_code import ClaudeCodeAdapter
 from skillhub.targets.codex import CodexAdapter
 from skillhub.config import AppConfig, TargetConfig, load_config
+from skillhub.storage import SkillStorage
 
 
 class TestTargetScope:
@@ -190,3 +191,110 @@ targets:
         config = load_config(config_file)
         assert "hermes" in config.targets
         assert config.targets["hermes"].scope == "user"
+
+    def test_load_config_default_target_env_var(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("SKILLHUB_DEFAULT_TARGET", "claude-code")
+        config = load_config()
+        keys = list(config.targets.keys())
+        assert keys[0] == "claude-code"
+
+    def test_load_config_default_target_env_var_invalid(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("SKILLHUB_DEFAULT_TARGET", "nonexistent")
+        config = load_config()
+        # Should be silently ignored, hermes stays first
+        keys = list(config.targets.keys())
+        assert keys[0] == "hermes"
+
+    def test_load_config_default_target_env_var_with_config_file(self, tmp_path, monkeypatch):
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("""
+targets:
+  hermes:
+    scope: project
+    enabled: true
+  codex:
+    scope: user
+    enabled: true
+""")
+        monkeypatch.setenv("SKILLHUB_DEFAULT_TARGET", "codex")
+        config = load_config(config_file)
+        keys = list(config.targets.keys())
+        assert keys[0] == "codex"
+        assert config.targets["codex"].scope == "user"
+
+
+class TestExtractPlatformsFromSkillmd:
+    """Tests for _extract_platforms_from_skillmd (P0 finding)."""
+
+    def _make_storage(self, tmp_path, skill_id, content):
+        storage = SkillStorage(tmp_path / "skills")
+        storage.save_skill_file(skill_id, "SKILL.md", content)
+        return storage
+
+    def test_extracts_targets_field(self, tmp_path):
+        storage = self._make_storage(tmp_path, "s1", b"---\ntargets: [hermes, claude-code]\n---\n# Skill")
+        from skillhub.api.skills import _extract_platforms_from_skillmd
+        result = _extract_platforms_from_skillmd("s1", storage)
+        assert result == ["hermes", "claude-code"]
+
+    def test_falls_back_to_platforms_field(self, tmp_path):
+        storage = self._make_storage(tmp_path, "s2", b"---\nplatforms: [linux, macos]\n---\n# Skill")
+        from skillhub.api.skills import _extract_platforms_from_skillmd
+        result = _extract_platforms_from_skillmd("s2", storage)
+        assert result == ["linux", "macos"]
+
+    def test_no_frontmatter_defaults_hermes(self, tmp_path):
+        storage = self._make_storage(tmp_path, "s3", b"# Just a heading\nNo frontmatter here")
+        from skillhub.api.skills import _extract_platforms_from_skillmd
+        result = _extract_platforms_from_skillmd("s3", storage)
+        assert result == ["hermes"]
+
+    def test_empty_frontmatter_defaults_hermes(self, tmp_path):
+        storage = self._make_storage(tmp_path, "s4", b"---\n---\n# Skill")
+        from skillhub.api.skills import _extract_platforms_from_skillmd
+        result = _extract_platforms_from_skillmd("s4", storage)
+        assert result == ["hermes"]
+
+    def test_missing_skillmd_defaults_hermes(self, tmp_path):
+        storage = SkillStorage(tmp_path / "skills")
+        from skillhub.api.skills import _extract_platforms_from_skillmd
+        result = _extract_platforms_from_skillmd("nonexistent", storage)
+        assert result == ["hermes"]
+
+    def test_malformed_yaml_defaults_hermes(self, tmp_path):
+        storage = self._make_storage(tmp_path, "s6", b"---\ntargets: [unclosed\n---\n# Skill")
+        from skillhub.api.skills import _extract_platforms_from_skillmd
+        result = _extract_platforms_from_skillmd("s6", storage)
+        assert result == ["hermes"]
+
+    def test_targets_not_list_defaults_hermes(self, tmp_path):
+        storage = self._make_storage(tmp_path, "s7", b"---\ntargets: hermes\n---\n# Skill")
+        from skillhub.api.skills import _extract_platforms_from_skillmd
+        result = _extract_platforms_from_skillmd("s7", storage)
+        assert result == ["hermes"]
+
+    def test_all_three_targets(self, tmp_path):
+        storage = self._make_storage(tmp_path, "s8", b"---\ntargets: [hermes, claude-code, codex]\n---\n# Skill")
+        from skillhub.api.skills import _extract_platforms_from_skillmd
+        result = _extract_platforms_from_skillmd("s8", storage)
+        assert result == ["hermes", "claude-code", "codex"]
+
+
+class TestCliInstallCommand:
+    """Tests for the CLI install command's new --target/--scope options."""
+
+    def test_install_help_shows_target_option(self):
+        from skillhub.cli.commands.install import install
+        runner = CliRunner()
+        result = runner.invoke(install, ["--help"])
+        assert result.exit_code == 0
+        assert "--target" in result.output
+        assert "--scope" in result.output
+        assert "--yes" in result.output
+
+    def test_install_unknown_target_exits_with_error(self):
+        from skillhub.cli.commands.install import install
+        runner = CliRunner()
+        result = runner.invoke(install, ["test-skill", "--target", "nonexistent"])
+        assert result.exit_code != 0
+        assert "Unknown target" in result.output or "Error" in result.output

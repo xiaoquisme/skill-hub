@@ -152,9 +152,10 @@
             }).join('');
             var installCommandsHtml = targets.map(function(target) {
                 var cmd = 'skillhub install ' + skill.name + ' --target ' + target;
+                var escapedCmd = cmd.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
                 return '<div class="install-command">' +
                     '<code>' + escapeHtml(cmd) + '</code>' +
-                    '<button class="copy-btn" onclick="copyToClipboard(this, \'' + cmd.replace(/'/g, "\\'") + '\')">' + t('skill.detail.copy') + '</button>' +
+                    '<button class="copy-btn" onclick="copyToClipboard(this, \'' + escapedCmd + '\')">' + t('skill.detail.copy') + '</button>' +
                 '</div>';
             }).join('');
 
@@ -195,11 +196,6 @@
             btn.textContent = t('skill.detail.copied');
             setTimeout(function() { btn.textContent = original; }, 2000);
         });
-    };
-
-    // Keep old function for backward compat
-    window.copyInstallCommand = function(name) {
-        copyToClipboard(document.querySelector('.copy-btn'), 'skillhub install ' + name);
     };
 
     window.confirmDeleteSkill = async function(skillId, skillName) {
@@ -252,26 +248,6 @@
     function formatDate(isoString) {
         if (!isoString) return '';
         return isoString.slice(0, 10);
-    }
-
-    function parseFrontmatter(content) {
-        var match = content.match(/^---\n([\s\S]*?)\n---/);
-        if (!match) return {};
-        var result = {};
-        var lines = match[1].split('\n');
-        for (var i = 0; i < lines.length; i++) {
-            var line = lines[i];
-            var colonIdx = line.indexOf(':');
-            if (colonIdx === -1) continue;
-            var key = line.substring(0, colonIdx).trim();
-            var value = line.substring(colonIdx + 1).trim();
-            // Handle arrays like [hermes, claude-code]
-            if (value.startsWith('[') && value.endsWith(']')) {
-                value = value.slice(1, -1).split(',').map(function(s) { return s.trim(); });
-            }
-            result[key] = value;
-        }
-        return result;
     }
 
     init();

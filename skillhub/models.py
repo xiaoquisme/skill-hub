@@ -30,7 +30,6 @@ class SkillResponse(SkillBase):
 
 class SkillDetail(SkillResponse):
     files: list["SkillFileResponse"] = Field(default_factory=list)
-    targets: list[str] = Field(default_factory=lambda: ["hermes"])
 
 
 class SkillFileResponse(BaseModel):

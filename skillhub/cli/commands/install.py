@@ -37,7 +37,16 @@ def install(name: str, target: str, scope: str, category: str, server: str, yes:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
 
-    scope_enum = TargetScope(scope)
+    try:
+        scope_enum = TargetScope(scope)
+    except ValueError:
+        click.echo(f"Error: Invalid scope '{scope}'. Must be 'user' or 'project'.", err=True)
+        raise SystemExit(1)
+
+    # Warn if target is disabled
+    target_config = config.targets.get(target)
+    if target_config and not target_config.enabled:
+        click.echo(f"Warning: Target '{target}' is disabled in config. Install may not work as expected.", err=True)
 
     # Warn if --category used with non-Hermes target
     if category and target != "hermes":

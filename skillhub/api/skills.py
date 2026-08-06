@@ -16,23 +16,23 @@ router = APIRouter(prefix="/api/skills", tags=["skills"])
 
 
 def _extract_platforms_from_skillmd(skill_id: str, storage: SkillStorage) -> list[str]:
-    """Extract platforms from SKILL.md frontmatter, defaulting to ['hermes']."""
+    """Extract install targets from SKILL.md frontmatter, defaulting to ['hermes']."""
     try:
         content = storage.get_skill_file(skill_id, "SKILL.md")
         if not content:
             return ["hermes"]
         text = content.decode("utf-8", errors="replace")
-        # Parse YAML frontmatter
         match = re.match(r"^---\s*\n(.*?)\n---\s*\n", text, re.DOTALL)
         if not match:
             return ["hermes"]
         import yaml
         frontmatter = yaml.safe_load(match.group(1))
-        if not frontmatter or "platforms" not in frontmatter:
+        if not frontmatter:
             return ["hermes"]
-        platforms = frontmatter["platforms"]
-        if isinstance(platforms, list):
-            return [str(p) for p in platforms]
+        # Prefer 'targets' field (install targets), fall back to 'platforms'
+        targets = frontmatter.get("targets") or frontmatter.get("platforms")
+        if isinstance(targets, list):
+            return [str(t) for t in targets]
         return ["hermes"]
     except Exception:
         return ["hermes"]

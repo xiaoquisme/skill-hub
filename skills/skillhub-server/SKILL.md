@@ -5,6 +5,7 @@ version: 1.0.0
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
+targets: [hermes, claude-code, codex]
 metadata:
   hermes:
     tags: [skills, registry, skillhub, server, docker, deployment]

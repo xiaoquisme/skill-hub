@@ -139,14 +139,13 @@ class TestCodexAdapter:
         path = self.adapter.resolve_path("my-skill", TargetScope.PROJECT)
         assert path == Path.cwd() / ".codex" / "agents" / "my-skill"
 
-    def test_write_skill_renames_skillmd(self):
+    def test_write_skill_keeps_skillmd(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             install_dir = Path(tmpdir) / "test-skill"
             files = {"SKILL.md": b"# Test", "helper.py": b"# Helper"}
             written = self.adapter.write_skill(install_dir, files)
-            # SKILL.md should be renamed to AGENTS.md
-            assert not (install_dir / "SKILL.md").exists()
-            assert (install_dir / "AGENTS.md").read_bytes() == b"# Test"
+            # SKILL.md is kept as-is for Codex
+            assert (install_dir / "SKILL.md").read_bytes() == b"# Test"
             assert (install_dir / "helper.py").read_bytes() == b"# Helper"
 
     def test_write_skill_non_skillmd_unchanged(self):

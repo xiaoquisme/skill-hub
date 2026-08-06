@@ -34,9 +34,6 @@ class CodexAdapter(TargetAdapter):
         install_dir.mkdir(parents=True, exist_ok=True)
         written = []
         for filename, content in files.items():
-            # Rename SKILL.md to AGENTS.md for Codex compatibility
-            if filename == "SKILL.md":
-                filename = "AGENTS.md"
             file_path = install_dir / filename
             file_path.parent.mkdir(parents=True, exist_ok=True)
             file_path.write_bytes(content)

@@ -1,85 +1,8 @@
 /**
- * SkillHub Admin - User management UI
+ * SkillHub Admin - User management UI (standalone page)
  */
 const Admin = {
-    init() {
-        this.bindEvents();
-        this.checkAuth();
-    },
-
-    checkAuth() {
-        const loginSection = document.getElementById('login-section');
-        const appSection = document.getElementById('app-section');
-        const adminSection = document.getElementById('admin-section');
-        const loginBtn = document.getElementById('login-btn');
-        const logoutBtn = document.getElementById('logout-btn');
-        const userStatus = document.getElementById('user-status');
-
-        if (Auth.isLoggedIn()) {
-            loginSection.classList.add('hidden');
-            appSection.classList.remove('hidden');
-            loginBtn.classList.add('hidden');
-            logoutBtn.classList.remove('hidden');
-
-            const user = Auth.getUser();
-            if (user) {
-                userStatus.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
-                userStatus.classList.remove('hidden');
-            }
-
-            if (Auth.isAdmin()) {
-                adminSection.classList.remove('hidden');
-            } else {
-                adminSection.classList.add('hidden');
-            }
-        } else {
-            loginSection.classList.remove('hidden');
-            appSection.classList.add('hidden');
-            adminSection.classList.add('hidden');
-            loginBtn.classList.remove('hidden');
-            logoutBtn.classList.add('hidden');
-            userStatus.classList.add('hidden');
-        }
-    },
-
     bindEvents() {
-        // Login form
-        const loginForm = document.getElementById('login-form');
-        if (loginForm) {
-            loginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const username = document.getElementById('login-username').value;
-                const password = document.getElementById('login-password').value;
-                const errorEl = document.getElementById('login-error');
-
-                try {
-                    await Auth.login(username, password);
-                    errorEl.classList.add('hidden');
-                    this.checkAuth();
-                    // Reload skills after login
-                    if (typeof window.loadSkills === 'function') {
-                        window.loadSkills();
-                    }
-                } catch (err) {
-                    errorEl.textContent = err.message;
-                    errorEl.classList.remove('hidden');
-                }
-            });
-        }
-
-        // Logout button
-        const logoutBtn = document.getElementById('logout-btn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => {
-                Auth.logout();
-                this.checkAuth();
-                // Reload skills after logout
-                if (typeof window.loadSkills === 'function') {
-                    window.loadSkills();
-                }
-            });
-        }
-
         // Create user form
         const createUserForm = document.getElementById('create-user-form');
         if (createUserForm) {
@@ -101,7 +24,7 @@ const Admin = {
 
                     if (!response.ok) {
                         const error = await response.json().catch(() => ({}));
-                        throw new Error(error.detail || 'Failed to create user');
+                        throw new Error(error.detail || '创建用户失败');
                     }
 
                     createUserForm.reset();
@@ -128,12 +51,12 @@ const Admin = {
                 headers: { 'Authorization': 'Bearer ' + Auth.getToken() },
             });
 
-            if (!response.ok) throw new Error('Failed to load users');
+            if (!response.ok) throw new Error('加载用户失败');
 
             const users = await response.json();
 
             if (users.length === 0) {
-                container.innerHTML = '<p class="empty">No users found</p>';
+                container.innerHTML = '<p class="empty">暂无用户</p>';
                 return;
             }
 
@@ -141,30 +64,31 @@ const Admin = {
                 <div class="user-card">
                     <div class="user-info">
                         <strong>${this.escapeHtml(user.username)}</strong>
-                        <span class="role-badge role-${user.role}">${user.role}</span>
+                        <span class="role-badge role-${user.role}">${user.role === 'admin' ? '管理员' : user.role === 'publisher' ? '发布者' : '观察者'}</span>
                     </div>
                     <div class="user-actions">
                         ${user.role !== 'admin' ? `
-                            <button class="btn btn-sm btn-secondary" onclick="Admin.changeRole('${user.id}', '${user.role}')">Change Role</button>
-                            <button class="btn btn-sm btn-danger" onclick="Admin.deleteUser('${user.id}', '${this.escapeHtml(user.username)}')">Delete</button>
+                            <button class="btn btn-sm btn-secondary" onclick="Admin.changeRole('${user.id}', '${user.role}')">修改角色</button>
+                            <button class="btn btn-sm btn-danger" onclick="Admin.deleteUser('${user.id}', '${this.escapeHtml(user.username)}')">删除</button>
                         ` : ''}
-                        <button class="btn btn-sm btn-secondary" onclick="Admin.resetPassword('${user.id}', '${this.escapeHtml(user.username)}')">Reset Password</button>
+                        <button class="btn btn-sm btn-secondary" onclick="Admin.resetPassword('${user.id}', '${this.escapeHtml(user.username)}')">重置密码</button>
                     </div>
                 </div>
             `).join('');
         } catch (err) {
-            container.innerHTML = '<p class="error">Failed to load users</p>';
+            container.innerHTML = '<p class="error">加载用户失败</p>';
             console.error(err);
         }
     },
 
     async changeRole(userId, currentRole) {
         const roles = ['admin', 'publisher', 'viewer'];
-        const newRole = prompt(`Change role for user (current: ${currentRole})\nAvailable roles: ${roles.join(', ')}`, currentRole);
+        const roleLabels = { admin: '管理员', publisher: '发布者', viewer: '观察者' };
+        const newRole = prompt(`修改用户角色（当前: ${roleLabels[currentRole] || currentRole}）\n可选角色: ${roles.map(r => roleLabels[r]).join(', ')}`, currentRole);
 
         if (!newRole || newRole === currentRole) return;
         if (!roles.includes(newRole)) {
-            alert('Invalid role');
+            alert('无效的角色');
             return;
         }
 
@@ -184,7 +108,7 @@ const Admin = {
 
             if (!response.ok) {
                 const error = await response.json().catch(() => ({}));
-                throw new Error(error.detail || 'Failed to update role');
+                throw new Error(error.detail || '修改角色失败');
             }
 
             this.loadUsers();
@@ -194,7 +118,7 @@ const Admin = {
     },
 
     async deleteUser(userId, username) {
-        if (!confirm(`Are you sure you want to delete user "${username}"?`)) return;
+        if (!confirm(`确定要删除用户 "${username}" 吗？`)) return;
 
         try {
             const response = await fetch(`/api/users/${userId}`, {
@@ -204,7 +128,7 @@ const Admin = {
 
             if (!response.ok) {
                 const error = await response.json().catch(() => ({}));
-                throw new Error(error.detail || 'Failed to delete user');
+                throw new Error(error.detail || '删除用户失败');
             }
 
             this.loadUsers();
@@ -214,7 +138,7 @@ const Admin = {
     },
 
     async resetPassword(userId, username) {
-        const newPassword = prompt(`Enter new password for "${username}":`);
+        const newPassword = prompt(`为 "${username}" 输入新密码:`);
         if (!newPassword) return;
 
         try {
@@ -229,10 +153,10 @@ const Admin = {
 
             if (!response.ok) {
                 const error = await response.json().catch(() => ({}));
-                throw new Error(error.detail || 'Failed to reset password');
+                throw new Error(error.detail || '重置密码失败');
             }
 
-            alert(`Password reset for ${username}`);
+            alert(`已重置 ${username} 的密码`);
         } catch (err) {
             alert(err.message);
         }

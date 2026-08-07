@@ -37,35 +37,72 @@ body {
     display: none !important;
 }
 
-/* Header */
-header {
+/* ========== Navigation Bar ========== */
+.navbar {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
-    padding: 24px 0;
+    padding: 0 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 
-.header-row {
+.nav-container {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    height: 56px;
+    gap: 32px;
 }
 
-header h1 {
-    font-size: 28px;
+.nav-brand {
+    font-size: 20px;
     font-weight: 700;
     color: var(--primary);
+    text-decoration: none;
+    flex-shrink: 0;
 }
 
-header .tagline {
+.nav-brand:hover {
+    color: var(--primary-dark);
+}
+
+.nav-tagline {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-left: -20px;
+}
+
+.nav-links {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+}
+
+.nav-link {
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    text-decoration: none;
     color: var(--text-muted);
     font-size: 14px;
-    margin-top: 4px;
+    font-weight: 500;
+    transition: background 0.2s, color 0.2s;
 }
 
-.header-actions {
+.nav-link:hover {
+    background: var(--bg);
+    color: var(--text);
+}
+
+.nav-link.active {
+    background: var(--primary);
+    color: white;
+}
+
+.nav-actions {
     display: flex;
     align-items: center;
     gap: 12px;
+    flex-shrink: 0;
 }
 
 .user-status {
@@ -77,25 +114,46 @@ header .tagline {
     font-weight: 500;
 }
 
-/* Login Section */
-.login-section {
-    padding: 24px 0;
+/* ========== Login Page ========== */
+.login-page {
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-wrapper {
+    width: 100%;
+    max-width: 400px;
+    padding: 20px;
 }
 
 .login-card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 32px;
-    max-width: 400px;
-    margin: 0 auto;
+    padding: 40px 32px;
 }
 
-.login-card h2 {
-    margin-bottom: 20px;
+.login-header {
     text-align: center;
+    margin-bottom: 32px;
 }
 
+.login-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 8px;
+}
+
+.login-header p {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+/* ========== Form Elements ========== */
 .form-group {
     margin-bottom: 16px;
 }
@@ -139,7 +197,69 @@ header .tagline {
     margin-bottom: 12px;
 }
 
-/* Admin Section */
+/* ========== Buttons ========== */
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+}
+
+.btn-secondary {
+    background: var(--border);
+    color: var(--text);
+}
+
+.btn-secondary:hover {
+    background: #d1d5db;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: var(--danger-dark);
+}
+
+.btn-block {
+    display: block;
+    width: 100%;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+
+.btn-outline:hover {
+    background: var(--bg);
+    border-color: var(--text-muted);
+}
+
+/* ========== Admin Section ========== */
 .admin-section {
     padding: 24px 0;
 }
@@ -215,7 +335,7 @@ header .tagline {
     gap: 8px;
 }
 
-/* Search */
+/* ========== Search ========== */
 .search-section {
     padding: 24px 0;
 }
@@ -254,50 +374,7 @@ header .tagline {
     cursor: pointer;
 }
 
-/* Buttons */
-.btn {
-    padding: 12px 24px;
-    border: none;
-    border-radius: var(--radius);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.btn-primary {
-    background: var(--primary);
-    color: white;
-}
-
-.btn-primary:hover {
-    background: var(--primary-dark);
-}
-
-.btn-secondary {
-    background: var(--border);
-    color: var(--text);
-}
-
-.btn-secondary:hover {
-    background: #d1d5db;
-}
-
-.btn-sm {
-    padding: 6px 12px;
-    font-size: 12px;
-}
-
-.btn-danger {
-    background: var(--danger);
-    color: white;
-}
-
-.btn-danger:hover {
-    background: var(--danger-dark);
-}
-
-/* Skill Grid */
+/* ========== Skill Grid ========== */
 .skill-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -357,7 +434,7 @@ header .tagline {
     font-size: 12px;
 }
 
-/* Modal */
+/* ========== Modal ========== */
 .modal {
     position: fixed;
     top: 0;
@@ -402,7 +479,7 @@ header .tagline {
     color: var(--text);
 }
 
-/* Skill Detail */
+/* ========== Skill Detail ========== */
 #skill-detail h2 {
     font-size: 24px;
     margin-bottom: 16px;
@@ -482,7 +559,7 @@ header .tagline {
     background: rgba(255, 255, 255, 0.2);
 }
 
-/* Skill Content Collapsible */
+/* ========== Skill Content Collapsible ========== */
 .skill-content {
     margin-bottom: 20px;
     border: 1px solid var(--border);
@@ -543,14 +620,14 @@ header .tagline {
     font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
 }
 
-/* Loading and Empty States */
+/* ========== Loading and Empty States ========== */
 .loading, .empty {
     text-align: center;
     padding: 48px;
     color: var(--text-muted);
 }
 
-/* Footer */
+/* ========== Footer ========== */
 footer {
     border-top: 1px solid var(--border);
     padding: 24px 0;
@@ -560,15 +637,27 @@ footer {
     font-size: 14px;
 }
 
-/* Delete Button */
+/* ========== Delete Button ========== */
 .delete-section {
     margin-top: 20px;
     padding-top: 16px;
     border-top: 1px solid var(--border);
 }
 
-/* Responsive */
+/* ========== Responsive ========== */
 @media (max-width: 640px) {
+    .nav-container {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 12px 0;
+        gap: 8px;
+    }
+
+    .nav-links {
+        order: 3;
+        width: 100%;
+    }
+
     .search-bar {
         flex-direction: column;
     }
@@ -593,11 +682,5 @@ footer {
         flex-direction: column;
         align-items: flex-start;
         gap: 8px;
-    }
-
-    .header-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
     }
 }

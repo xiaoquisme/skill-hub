@@ -17,12 +17,13 @@
     var categories = new Set();
 
     function applyI18n() {
-        // Static HTML elements
-        document.getElementById('page-title').textContent = t('app.title');
-        document.getElementById('tagline').textContent = t('app.tagline');
-        document.getElementById('footer-text').textContent = t('app.footer');
-        searchInput.placeholder = t('search.placeholder');
-        searchBtn.textContent = t('search.btn');
+        // Static HTML elements (with null checks for pages that may not have them)
+        var el;
+        if ((el = document.getElementById('page-title'))) el.textContent = t('app.title');
+        if ((el = document.getElementById('tagline'))) el.textContent = t('app.tagline');
+        if ((el = document.getElementById('footer-text'))) el.textContent = t('app.footer');
+        if (searchInput) searchInput.placeholder = t('search.placeholder');
+        if (searchBtn) searchBtn.textContent = t('search.btn');
 
         // Filter options
         var catOptions = categoryFilter.querySelectorAll('option');

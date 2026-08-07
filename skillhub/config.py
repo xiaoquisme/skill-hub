@@ -78,4 +78,4 @@ def save_config(config: AppConfig, config_path: Optional[Path] = None) -> None:
     data["storage"]["data_dir"] = str(data["storage"]["data_dir"])
     data["storage"]["skills_dir"] = str(data["storage"]["skills_dir"])
     with open(path, "w") as f:
-        yaml.dump(data, f, default_flow_style=False)
+        yaml.safe_dump(data, f, default_flow_style=False)

@@ -35,23 +35,8 @@
         sortOptions[3].textContent = t('filter.sort_name');
     }
 
-    async function init() {
-        await loadSkills();
-        setupEventListeners();
-
-        // Wait for translations to load before applying them
-        document.addEventListener('i18n:ready', function() {
-            applyI18n();
-            renderSkills(allSkills);
-        });
-
-        // If translations are already loaded, apply immediately
-        if (getLocale() && window.t('app.title') !== 'app.title') {
-            applyI18n();
-        }
-    }
-
-    async function loadSkills(query, category, sort) {
+    // Make loadSkills available globally for Admin to call
+    window.loadSkills = async function(query, category, sort) {
         skillList.innerHTML = '<div class="loading">' + t('loading.skills') + '</div>';
 
         try {
@@ -63,7 +48,7 @@
             skillList.innerHTML = '<div class="empty">' + t('error.server') + '</div>';
             console.error('Failed to load skills:', err);
         }
-    }
+    };
 
     function updateCategoryFilter() {
         var current = categoryFilter.value;
@@ -146,6 +131,14 @@
             var tagsHtml = (skill.tags || []).length > 0 ?
                 '<dt>' + t('skill.detail.tags') + '</dt><dd>' + skill.tags.map(function(t) { return escapeHtml(t); }).join(', ') + '</dd>' : '';
 
+            // Show delete button only if authenticated
+            var deleteHtml = '';
+            if (Auth.isLoggedIn()) {
+                deleteHtml = '<div class="delete-section">' +
+                    '<button class="btn btn-danger btn-sm delete-skill-btn">' + t('skill.detail.delete') + '</button>' +
+                '</div>';
+            }
+
             skillDetail.innerHTML =
                 '<h2>' + escapeHtml(skill.display_name || skill.name) + '</h2>' +
                 '<p class="description">' + escapeHtml(skill.description || t('skill.no_description_available')) + '</p>' +
@@ -159,9 +152,7 @@
                     '<code>skillhub install ' + escapeHtml(skill.name) + '</code>' +
                     '<button class="copy-btn" onclick="copyInstallCommand(\'' + escapeHtml(skill.name) + '\')">' + t('skill.detail.copy') + '</button>' +
                 '</div>' +
-                '<div class="delete-section">' +
-                    '<button class="btn btn-danger btn-sm delete-skill-btn">' + t('skill.detail.delete') + '</button>' +
-                '</div>';
+                deleteHtml;
 
             modal.classList.remove('hidden');
 
@@ -224,7 +215,7 @@
         var query = searchInput.value.trim();
         var category = categoryFilter.value;
         var sort = sortFilter.value;
-        loadSkills(query || undefined, category || undefined, sort);
+        window.loadSkills(query || undefined, category || undefined, sort);
     }
 
     function escapeHtml(str) {
@@ -237,6 +228,22 @@
     function formatDate(isoString) {
         if (!isoString) return '';
         return isoString.slice(0, 10);
+    }
+
+    async function init() {
+        await window.loadSkills();
+        setupEventListeners();
+
+        // Wait for translations to load before applying them
+        document.addEventListener('i18n:ready', function() {
+            applyI18n();
+            window.loadSkills();
+        });
+
+        // If translations are already loaded, apply immediately
+        if (getLocale() && window.t('app.title') !== 'app.title') {
+            applyI18n();
+        }
     }
 
     init();

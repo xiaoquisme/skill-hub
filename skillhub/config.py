@@ -3,7 +3,6 @@
 import os
 from pathlib import Path
 from typing import Optional
-
 import yaml
 from pydantic import BaseModel, Field
 
@@ -21,11 +20,19 @@ class StorageConfig(BaseModel):
     skills_dir: Path = Field(default_factory=lambda: Path.home() / ".skillhub" / "skills")
 
 
+class AdminConfig(BaseModel):
+    """Admin user preset configuration."""
+    username: str = "admin"
+    password_hash: str = ""
+
+
 class AppConfig(BaseModel):
     """Application configuration."""
     server: ServerConfig = Field(default_factory=ServerConfig)
     storage: StorageConfig = Field(default_factory=StorageConfig)
     registry_url: str = "http://127.0.0.1:8000"
+    admin: AdminConfig = Field(default_factory=AdminConfig)
+    api_token: str = ""
 
 
 CONFIG_DIR = Path.home() / ".skillhub"

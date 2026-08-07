@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>构思：用户管理功能 — SkillHub</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --bg: #fafafa;
+            --surface: #ffffff;
+            --text: #1f2937;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --radius: 8px;
+            --accent-soft: #eef2ff;
+            --warn-soft: #fef3c7;
+            --success-soft: #ecfdf5;
+            --danger-soft: #fef2f2;
+            --danger: #ef4444;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.8;
+            font-size: 15px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header */
+        .doc-header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 40px 0 32px;
+            margin-bottom: 40px;
+        }
+
+        .doc-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .doc-header .subtitle {
+            font-size: 15px;
+            color: var(--text-muted);
+        }
+
+        .meta-strip {
+            display: flex;
+            gap: 24px;
+            margin-top: 16px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .meta-strip dt {
+            font-weight: 600;
+            color: var(--text);
+            margin-right: 4px;
+        }
+
+        .meta-strip dd {
+            margin-right: 20px;
+        }
+
+        /* Stats strip */
+        .stats-strip {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+        }
+
+        .stat-pill {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+
+        .stat-pill .label {
+            color: var(--text-muted);
+        }
+
+        .stat-pill .value {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* Sections */
+        section {
+            margin-bottom: 40px;
+        }
+
+        section > h2 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--primary);
+            color: var(--text);
+        }
+
+        .eyebrow {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+
+        /* Axes */
+        .axes-list {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .axes-list li {
+            background: var(--accent-soft);
+            color: var(--primary-dark);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        /* Idea cards */
+        .idea-nav {
+            margin-bottom: 24px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+        }
+
+        .idea-nav h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+        }
+
+        .idea-nav ol {
+            padding-left: 20px;
+        }
+
+        .idea-nav li {
+            margin-bottom: 4px;
+        }
+
+        .idea-nav a {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .idea-nav a:hover {
+            text-decoration: underline;
+        }
+
+        .idea-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .idea-card h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .idea-card .axis-tag {
+            display: inline-block;
+            background: var(--accent-soft);
+            color: var(--primary-dark);
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+
+        .idea-card .description {
+            font-size: 15px;
+            line-height: 1.7;
+            margin-bottom: 16px;
+        }
+
+        .idea-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px 24px;
+            margin-bottom: 16px;
+        }
+
+        .idea-meta .field {
+            font-size: 13px;
+        }
+
+        .idea-meta .field-label {
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-right: 4px;
+        }
+
+        .confidence-bar {
+            display: inline-block;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--primary);
+            vertical-align: middle;
+            margin-left: 6px;
+        }
+
+        .complexity-chip {
+            display: inline-block;
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .complexity-low { background: var(--success-soft); color: #065f46; }
+        .complexity-medium { background: var(--warn-soft); color: #92400e; }
+        .complexity-high { background: var(--danger-soft); color: #991b1b; }
+
+        /* Diagram */
+        .diagram-wrap {
+            margin: 16px 0;
+            overflow-x: auto;
+        }
+
+        .diagram-wrap svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .diagram-caption {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 6px;
+            font-style: italic;
+        }
+
+        /* Rejection table */
+        .rejection-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .rejection-table th {
+            text-align: left;
+            padding: 8px 12px;
+            border-bottom: 2px solid var(--border);
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .rejection-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* Footer */
+        .composition-signal {
+            margin-top: 48px;
+            padding: 16px 0;
+            border-top: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .idea-meta { grid-template-columns: 1fr; }
+            .stats-strip { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="doc-header">
+    <div class="container">
+        <div class="eyebrow">Ideation</div>
+        <h1>用户管理功能 — SkillHub</h1>
+        <p class="subtitle">为轻量级技能注册中心添加身份认证、权限控制和用户生命周期管理</p>
+        <dl class="meta-strip">
+            <div><dt>日期</dt><dd>2026-08-07</dd></div>
+            <div><dt>主题</dt><dd>user-management</dd></div>
+            <div><dt>聚焦</dt><dd>加上用户管理功能</dd></div>
+            <div><dt>模式</dt><dd>repo-grounded</dd></div>
+        </dl>
+    </div>
+</header>
+
+<div class="container">
+
+    <!-- Stats -->
+    <div class="stats-strip">
+        <div class="stat-pill"><span class="label">原始候选：</span><span class="value">38</span></div>
+        <div class="stat-pill"><span class="label">筛选后：</span><span class="value">7</span></div>
+        <div class="stat-pill"><span class="label">淘汰：</span><span class="value">31</span></div>
+        <div class="stat-pill"><span class="label">主题轴：</span><span class="value">5</span></div>
+    </div>
+
+    <!-- Grounding Context -->
+    <section>
+        <h2>Grounding Context</h2>
+        <p style="margin-bottom: 12px;">SkillHub 是一个轻量级、自托管的 Hermes Agent 技能注册中心。技术栈：FastAPI + SQLite (aiosqlite) + Click CLI + 原生 JS Web UI。</p>
+
+        <p style="margin-bottom: 8px;"><strong>关键历史背景：</strong>项目此前曾有基于 API Token 的认证系统，但因 SHA-256 哈希比对 bug（原始 token 与存储的哈希直接比较导致所有认证请求返回 401）被完整移除。移除计划记录在 <code>docs/plans/2026-07-20-001-feat-remove-auth-plan.md</code>。当前所有 API 端点完全公开，无任何访问控制。</p>
+
+        <p style="margin-bottom: 8px;"><strong>当前状态：</strong></p>
+        <ul style="margin-left: 20px; margin-bottom: 12px;">
+            <li><code>skills</code> 表有 <code>published_by</code> 字段但始终为 None</li>
+            <li>Web UI 的删除按钮无任何保护，任何人可删除任何技能</li>
+            <li>CLI <code>skillhub push</code> 无认证要求</li>
+            <li>无用户表、无会话管理、无密码存储</li>
+            <li>Docker 部署使用非 root 用户运行</li>
+        </ul>
+
+        <p style="margin-bottom: 8px;"><strong>项目约定：</strong></p>
+        <ul style="margin-left: 20px; margin-bottom: 12px;">
+            <li>配置通过 <code>~/.skillhub/config.yaml</code> + 环境变量</li>
+            <li>数据库使用 aiosqlite，异步操作</li>
+            <li>前端为原生 JS，无框架依赖</li>
+            <li>支持中英文双语 (i18n)</li>
+            <li>pyproject.toml 使用 hatchling 构建</li>
+        </ul>
+
+        <p><strong>相关解决方案文档：</strong></p>
+        <ul style="margin-left: 20px;">
+            <li><code>docs/solutions/runtime-errors/auth-token-hash-mismatch.md</code> — 之前认证 bug 的根因分析</li>
+            <li><code>docs/solutions/architecture-patterns/adding-crud-delete-to-web-frontend.md</code> — 前端 CRUD 模式参考</li>
+        </ul>
+    </section>
+
+    <!-- Topic Axes -->
+    <section>
+        <h2>Topic Axes</h2>
+        <ul class="axes-list">
+            <li>认证机制 (Authentication)</li>
+            <li>授权与权限 (Authorization)</li>
+            <li>用户生命周期 (User Lifecycle)</li>
+            <li>集成层面 (Integration Surface)</li>
+            <li>安全基础 (Security Foundations)</li>
+        </ul>
+    </section>
+
+    <!-- Ranked Ideas -->
+    <section>
+        <h2>Ranked Ideas</h2>
+
+        <nav class="idea-nav">
+            <h3>Jump to</h3>
+            <ol>
+                <li><a href="#idea-1">JWT + bcrypt 认证系统</a></li>
+                <li><a href="#idea-2">基于角色的访问控制 (RBAC)</a></li>
+                <li><a href="#idea-3">Web UI 登录/注册页面</a></li>
+                <li><a href="#idea-4">CLI 认证命令</a></li>
+                <li><a href="#idea-5">技能所有权追踪</a></li>
+                <li><a href="#idea-6">API Key 管理</a></li>
+                <li><a href="#idea-7">邀请码注册机制</a></li>
+            </ol>
+        </nav>
+
+        <!-- Idea 1 -->
+        <article class="idea-card" id="idea-1">
+            <h3>1. JWT + bcrypt 认证系统</h3>
+            <span class="axis-tag">认证机制</span>
+            <p class="description">
+                构建基于 JWT (JSON Web Token) 的无状态认证系统，使用 bcrypt 进行密码哈希存储。用户注册时密码经 bcrypt 加盐哈希后存入 <code>users</code> 表；登录时验证密码并签发 JWT；后续请求通过 <code>Authorization: Bearer &lt;token&gt;</code> 头携带凭证。JWT 的无状态特性避免了服务端会话存储的复杂度，适合 SQLite 的单文件部署场景。
+            </p>
+
+            <div class="diagram-wrap">
+                <svg viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg" style="font-family: -apple-system, sans-serif; font-size: 12px;">
+                    <!-- Boxes -->
+                    <rect x="10" y="30" width="120" height="50" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+                    <text x="70" y="52" text-anchor="middle" font-weight="600" fill="#4f46e5">Client</text>
+                    <text x="70" y="68" text-anchor="middle" fill="#6b7280" font-size="10">CLI / Web UI</text>
+
+                    <rect x="190" y="30" width="140" height="50" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+                    <text x="260" y="52" text-anchor="middle" font-weight="600" fill="#4f46e5">FastAPI</text>
+                    <text x="260" y="68" text-anchor="middle" fill="#6b7280" font-size="10">Auth Middleware</text>
+
+                    <rect x="390" y="30" width="120" height="50" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+                    <text x="450" y="52" text-anchor="middle" font-weight="600" fill="#4f46e5">bcrypt</text>
+                    <text x="450" y="68" text-anchor="middle" fill="#6b7280" font-size="10">Password Hash</text>
+
+                    <rect x="550" y="30" width="120" height="50" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+                    <text x="610" y="52" text-anchor="middle" font-weight="600" fill="#4f46e5">SQLite</text>
+                    <text x="610" y="68" text-anchor="middle" fill="#6b7280" font-size="10">users table</text>
+
+                    <!-- Arrows -->
+                    <line x1="130" y1="55" x2="190" y2="55" stroke="#6366f1" stroke-width="1.5" marker-end="url(#arrow)"/>
+                    <text x="160" y="48" text-anchor="middle" fill="#6b7280" font-size="9">POST /auth/login</text>
+
+                    <line x1="330" y1="55" x2="390" y2="55" stroke="#6366f1" stroke-width="1.5" marker-end="url(#arrow)"/>
+                    <text x="360" y="48" text-anchor="middle" fill="#6b7280" font-size="9">verify</text>
+
+                    <line x1="510" y1="55" x2="550" y2="55" stroke="#6366f1" stroke-width="1.5" marker-end="url(#arrow)"/>
+                    <text x="530" y="48" text-anchor="middle" fill="#6b7280" font-size="9">query</text>
+
+                    <!-- JWT flow -->
+                    <rect x="190" y="120" width="300" height="40" rx="6" fill="#ecfdf5" stroke="#10b981" stroke-width="1"/>
+                    <text x="340" y="145" text-anchor="middle" font-weight="500" fill="#065f46" font-size="11">JWT Response: { user_id, role, exp } → Client stores</text>
+
+                    <line x1="260" y1="80" x2="260" y2="120" stroke="#10b981" stroke-width="1" stroke-dasharray="4"/>
+                    <text x="270" y="105" fill="#6b7280" font-size="9">sign</text>
+
+                    <!-- Subsequent request -->
+                    <rect x="190" y="180" width="300" height="30" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+                    <text x="340" y="200" text-anchor="middle" fill="#92400e" font-size="11">Subsequent: Bearer JWT → middleware verifies → proceed</text>
+
+                    <line x1="340" y1="160" x2="340" y2="180" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4"/>
+
+                    <defs>
+                        <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                            <path d="M0,0 L8,3 L0,6" fill="none" stroke="#6366f1" stroke-width="1"/>
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+            <p class="diagram-caption">JWT 认证流程：登录签发 token，后续请求无状态验证</p>
+
+            <dl class="idea-meta">
+                <div class="field"><span class="field-label">基础依据：</span><code>direct:</code> 之前的认证系统因 SHA-256 哈希比对 bug 被移除 (<code>auth-token-hash-mismatch.md</code>)；bcrypt 是经过验证的密码哈希方案，从根本上避免了自定义哈希逻辑的错误风险。</div>
+                <div class="field"><span class="field-label">为何重要：</span>这是整个用户管理系统的基石。没有认证，后续的授权、所有权、审计都无从谈起。JWT 的无状态特性与 SkillHub 的轻量定位高度契合。</div>
+                <div class="field"><span class="field-label">置信度：</span>High <span class="confidence-bar" style="width: 90px;"></span></div>
+                <div class="field"><span class="field-label">复杂度：</span><span class="complexity-chip complexity-medium">Medium</span></div>
+            </dl>
+        </article>
+
+        <!-- Idea 2 -->
+        <article class="idea-card" id="idea-2">
+            <h3>2. 基于角色的访问控制 (RBAC)</h3>
+            <span class="axis-tag">授权与权限</span>
+            <p class="description">
+                定义三种角色：<strong>admin</strong>（管理员，可管理用户和所有技能）、<strong>publisher</strong>（发布者，可发布和管理自己的技能）、<strong>viewer</strong>（观察者，只读访问）。每个 API 端点通过 JWT 中的角色声明进行权限检查。admin 角色默认分配给首个注册用户（自托管场景的常见模式）。
+            </p>
+            <dl class="idea-meta">
+                <div class="field"><span class="field-label">基础依据：</span><code>reasoned:</code> 一个允许多用户发布的注册中心必须区分权限级别——否则任何注册用户都能删除他人技能。npm、PyPI 等包注册中心均采用类似的 ownership + maintainer 模型。</div>
+                <div class="field"><span class="field-label">为何重要：</span>权限控制是多用户系统的核心安全机制。没有 RBAC，"用户管理"只是增加了登录步骤，没有真正保护资源。</div>
+                <div class="field"><span class="field-label">置信度：</span>High <span class="confidence-bar" style="width: 85px;"></span></div>
+                <div class="field"><span class="field-label">复杂度：</span><span class="complexity-chip complexity-medium">Medium</span></div>
+            </dl>
+        </article>
+
+        <!-- Idea 3 -->
+        <article class="idea-card" id="idea-3">
+            <h3>3. Web UI 登录/注册页面</h3>
+            <span class="axis-tag">集成层面</span>
+            <p class="description">
+                在现有 Web UI 中添加登录和注册页面。注册表单包含用户名、邮箱、密码字段；登录表单包含用户名和密码。登录成功后将 JWT 存储在 <code>localStorage</code>，后续 API 请求自动附带 <code>Authorization</code> 头。未登录用户只能浏览技能列表（只读），登录后显示发布和删除按钮。保持现有的 i18n 双语支持。
+            </p>
+            <dl class="idea-meta">
+                <div class="field"><span class="field-label">基础依据：</span><code>direct:</code> 现有 Web UI (<code>skillhub/static/js/app.js</code>) 无任何认证交互；删除按钮直接暴露给所有访客。前端 CRUD 模式文档 (<code>adding-crud-delete-to-web-frontend.md</code>) 提供了添加新 UI 功能的六步清单参考。</div>
+                <div class="field"><span class="field-label">为何重要：</span>Web UI 是最常见的交互入口。没有登录页面，用户无法通过浏览器完成认证，JWT 系统对 Web 用户不可用。</div>
+                <div class="field"><span class="field-label">置信度：</span>High <span class="confidence-bar" style="width: 88px;"></span></div>
+                <div class="field"><span class="field-label">复杂度：</span><span class="complexity-chip complexity-medium">Medium</span></div>
+            </dl>
+        </article>
+
+        <!-- Idea 4 -->
+        <article class="idea-card" id="idea-4">
+            <h3>4. CLI 认证命令</h3>
+            <span class="axis-tag">集成层面</span>
+            <p class="description">
+                添加 <code>skillhub auth login</code>、<code>skillhub auth logout</code>、<code>skillhub auth status</code> 三个 CLI 命令。login 命令交互式输入用户名密码，获取 JWT 后存储到 <code>~/.skillhub/config.yaml</code> 的 <code>api_token</code> 字段。push 命令自动从配置读取 token 并附带 <code>Authorization</code> 头。logout 清除存储的 token。
+            </p>
+            <dl class="idea-meta">
+                <div class="field"><span class="field-label">基础依据：</span><code>direct:</code> 之前有 <code>skillhub auth</code> 命令组 (在移除计划 U6 中记录)，但因认证系统整体被删除而移除。现在需要以 JWT 方式重新实现，修复之前的 token 存储和验证流程。</div>
+                <div class="field"><span class="field-label">为何重要：</span>CLI 是开发者发布技能的主要工具。<code>skillhub push</code> 无认证意味着任何人都能向注册中心推送技能，这在多用户场景下不可接受。</div>
+                <div class="field"><span class="field-label">置信度：</span>High <span class="confidence-bar" style="width: 85px;"></span></div>
+                <div class="field"><span class="field-label">复杂度：</span><span class="complexity-chip complexity-low">Low</span></div>
+            </dl>
+        </article>
+
+        <!-- Idea 5 -->
+        <article class="idea-card" id="idea-5">
+            <h3>5. 技能所有权追踪</h3>
+            <span class="axis-tag">安全基础</span>
+            <p class="description">
+                将 <code>skills</code> 表的 <code>published_by</code> 字段从始终为 None 改为存储发布者的 user_id。发布技能时自动关联当前认证用户；Web UI 显示每个技能的发布者；拥有者可以编辑和删除自己的技能；admin 可以管理所有技能。这利用了已有的数据库字段，改动最小但效果显著。
+            </p>
+            <dl class="idea-meta">
+                <div class="field"><span class="field-label">基础依据：</span><code>direct:</code> <code>skills</code> 表已有 <code>published_by TEXT</code> 字段 (<code>database.py:23</code>)，<code>SkillResponse</code> 模型已有 <code>published_by: Optional[str]</code> (<code>models.py:25</code>)，但从未被赋值。基础设施已就绪，只需接入用户系统。</div>
+                <div class="field"><span class="field-label">为何重要：</span>所有权是授权的前提——没有"谁发布的"就无法实现"只能删除自己的"。这个改动是连接用户系统和技能数据的桥梁。</div>
+                <div class="field"><span class="field-label">置信度：</span>High <span class="confidence-bar" style="width: 92px;"></span></div>
+                <div class="field"><span class="field-label">复杂度：</span><span class="complexity-chip complexity-low">Low</span></div>
+            </dl>
+        </article>
+
+        <!-- Idea 6 -->
+        <article class="idea-card" id="idea-6">
+            <h3>6. API Key 管理</h3>
+            <span class="axis-tag">认证机制</span>
+            <p class="description">
+                除 JWT 会话令牌外，支持创建和管理长期有效的 API Key。用户通过 Web UI 或 CLI 生成 API Key（类似 GitHub Personal Access Tokens），用于 CI/CD 管道和自动化脚本。API Key 存储为 bcrypt 哈希（吸取上次的教训），支持设置过期时间和权限范围（只读/读写）。CLI 的 <code>skillhub push</code> 可通过 <code>--token</code> 参数或环境变量 <code>SKILLHUB_TOKEN</code> 传入。
+            </p>
+            <dl class="idea-meta">
+                <div class="field"><span class="field-label">基础依据：</span><code>external:</code> npm (<code>npm token create</code>)、PyPI (<code>API tokens</code>)、GitHub (Personal Access Tokens) 均提供 API Key 机制用于自动化场景。JWT 适合交互式会话，API Key 适合程序化访问——两者互补。</div>
+                <div class="field"><span class="field-label">为何重要：</span>开发者需要在 CI/CD 管道中自动发布技能，JWT 的短有效期不适合此场景。API Key 解决了"如何在脚本中认证"的问题。</div>
+                <div class="field"><span class="field-label">置信度：</span>Medium-High <span class="confidence-bar" style="width: 75px;"></span></div>
+                <div class="field"><span class="field-label">复杂度：</span><span class="complexity-chip complexity-medium">Medium</span></div>
+            </dl>
+        </article>
+
+        <!-- Idea 7 -->
+        <article class="idea-card" id="idea-7">
+            <h3>7. 邀请码注册机制</h3>
+            <span class="axis-tag">用户生命周期</span>
+            <p class="description">
+                为自托管场景提供可选的邀请码注册机制。管理员在配置中启用 <code>require_invite_code: true</code>，新用户注册时需要输入有效的邀请码。邀请码由 admin 通过 CLI (<code>skillhub admin invite-code generate</code>) 或 Web UI 生成，可设置使用次数限制和过期时间。未启用时任何人可自由注册。这平衡了开放性和可控性。
+            </p>
+            <dl class="idea-meta">
+                <div class="field"><span class="field-label">基础依据：</span><code>reasoned:</code> 自托管注册中心的典型场景是团队或组织内部使用，不希望外部人员随意注册发布技能。邀请码是最低摩擦的访问控制方式——不需要邮件服务，不需要 SSO，只需一个字符串。Discourse、Mastodon 等自托管平台广泛采用此模式。</div>
+                <div class="field"><span class="field-label">为何重要：</span>没有注册控制的用户管理系统是不完整的——任何人都能注册意味着访问控制形同虚设。邀请码以极低的实现成本解决了这个问题。</div>
+                <div class="field"><span class="field-label">置信度：</span>Medium <span class="confidence-bar" style="width: 65px;"></span></div>
+                <div class="field"><span class="field-label">复杂度：</span><span class="complexity-chip complexity-low">Low</span></div>
+            </dl>
+        </article>
+
+    </section>
+
+    <!-- Rejection Summary -->
+    <section>
+        <h2>Rejection Summary</h2>
+        <table class="rejection-table">
+            <thead>
+                <tr><th>#</th><th>候选想法</th><th>淘汰原因</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>1</td><td>魔法链接 / 无密码认证</td><td>需要邮件基础设施，与"轻量自托管"定位冲突</td></tr>
+                <tr><td>2</td><td>OAuth / SSO 集成 (GitHub, Google)</td><td>引入外部依赖，增加部署复杂度，超出轻量级范围</td></tr>
+                <tr><td>3</td><td>用户个人主页 / Dashboard</td><td>锦上添花，非核心用户管理功能；可作为后续迭代</td></tr>
+                <tr><td>4</td><td>每用户速率限制</td><td>重要但属于运维层面，应在核心用户管理之后实现</td></tr>
+                <tr><td>5</td><td>审计日志（谁发布了什么）</td><td>依赖用户系统和所有权追踪，是后续增强而非核心</td></tr>
+                <tr><td>6</td><td>团队 / 组织支持</td><td>范围过大，当前阶段单用户角色模型足够；可后续扩展</td></tr>
+                <tr><td>7</td><td>OAuth Provider 自建（如 Keycloak）</td><td>过度工程化，与 SQLite + 单文件部署的轻量架构不匹配</td></tr>
+                <tr><td>8</td><td>2FA / TOTP 双因素认证</td><td>自托管场景下优先级低，增加用户摩擦；可作为未来增强</td></tr>
+                <tr><td>9</td><td>密码重置邮件流程</td><td>需要邮件服务；自托管场景下管理员可直接重置数据库</td></tr>
+                <tr><td>10</td><td>社交登录 (微信、钉钉)</td><td>中国开发者场景有吸引力但引入外部 API 依赖，与自托管矛盾</td></tr>
+                <tr><td>11</td><td>OAuth 回调安全 (CSRF, PKCE)</td><td>依赖 OAuth Provider，当前无此需求</td></tr>
+                <tr><td>12</td><td>会话固定攻击防护</td><td>JWT 无状态方案天然免疫此攻击，无需额外处理</td></tr>
+                <tr><td>13</td><td>CSRF Token 机制</td><td>JWT + Bearer header 方案不依赖 Cookie，天然免疫 CSRF</td></tr>
+                <tr><td>14</td><td>密码策略（最小长度、复杂度）</td><td>属于实现细节而非独立功能点，应在 Idea 1 实现中覆盖</td></tr>
+                <tr><td>15</td><td>用户头像 / 个人资料编辑</td><td>非核心，可后续迭代</td></tr>
+                <tr><td>16</td><td>技能评分和评论系统</td><td>超出用户管理范围，属于社区功能</td></tr>
+                <tr><td>17</td><td>技能收藏夹 / 书签</td><td>超出用户管理范围</td></tr>
+                <tr><td>18</td><td>用户活动时间线</td><td>锦上添花，依赖审计日志，优先级低</td></tr>
+                <tr><td>19</td><td>Webhook 通知（发布/删除事件）</td><td>运维层面功能，非核心用户管理</td></tr>
+                <tr><td>20</td><td>LDAP / Active Directory 集成</td><td>企业级需求，与轻量自托管定位不符</td></tr>
+                <tr><td>21</td><td>SAML / OIDC SSO</td><td>过度复杂，超出当前项目规模</td></tr>
+                <tr><td>22</td><td>多因素认证 (SMS)</td><td>需要短信服务，自托管场景不现实</td></tr>
+                <tr><td>23</td><td>账号注销功能</td><td>有用但非核心；admin 可通过数据库直接操作</td></tr>
+                <tr><td>24</td><td>登录设备管理</td><td>JWT 无状态方案不追踪设备，实现成本高</td></tr>
+                <tr><td>25</td><td>用户间消息系统</td><td>超出范围，属于协作功能</td></tr>
+                <tr><td>26</td><td>技能访问统计（按用户）</td><td>依赖用户系统但属于分析功能，可后续实现</td></tr>
+                <tr><td>27</td><td>管理员仪表盘</td><td>锦上添花，非核心</td></tr>
+                <tr><td>28</td><td>用户导入/导出</td><td>自托管场景下可通过数据库直接操作</td></tr>
+                <tr><td>29</td><td>OAuth token 刷新机制</td><td>无 OAuth Provider，不适用</td></tr>
+                <tr><td>30</td><td>API 限流中间件</td><td>运维层面，应在核心用户管理之后实现</td></tr>
+                <tr><td>31</td><td>用户行为分析</td><td>超出用户管理范围，属于产品分析</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <footer class="composition-signal">
+        Composed 2026-08-07 by ce-ideate from <code>skillhub/</code> codebase context
+    </footer>
+
+</div>
+</body>
+</html>

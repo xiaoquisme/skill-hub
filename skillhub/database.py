@@ -32,6 +32,15 @@ CREATE TABLE IF NOT EXISTS skill_files (
     size_bytes INTEGER,
     UNIQUE(skill_id, filename)
 );
+
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'viewer' CHECK(role IN ('admin', 'publisher', 'viewer')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 ALLOWED_SORT_FIELDS = {"created_at", "updated_at", "name", "category", "download_count"}
@@ -217,3 +226,65 @@ class Database:
             (skill_id,),
         )
         await self.conn.commit()
+
+    # --- Users CRUD ---
+
+    async def create_user(
+        self,
+        username: str,
+        password_hash: str,
+        role: str = "viewer",
+    ) -> dict:
+        user_id = str(uuid.uuid4())
+        now = datetime.now(UTC).isoformat()
+
+        await self.conn.execute(
+            """INSERT INTO users (id, username, password_hash, role, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (user_id, username, password_hash, role, now, now),
+        )
+        await self.conn.commit()
+        return await self.get_user(user_id)
+
+    async def get_user(self, user_id: str) -> Optional[dict]:
+        async with self.conn.execute(
+            "SELECT * FROM users WHERE id = ?", (user_id,)
+        ) as cursor:
+            row = await cursor.fetchone()
+            if row:
+                return dict(row)
+        return None
+
+    async def get_user_by_username(self, username: str) -> Optional[dict]:
+        async with self.conn.execute(
+            "SELECT * FROM users WHERE username = ?", (username,)
+        ) as cursor:
+            row = await cursor.fetchone()
+            if row:
+                return dict(row)
+        return None
+
+    async def update_user(self, user_id: str, **kwargs) -> Optional[dict]:
+        kwargs["updated_at"] = datetime.now(UTC).isoformat()
+        set_clause = ", ".join(f"{k} = ?" for k in kwargs)
+        values = list(kwargs.values()) + [user_id]
+
+        await self.conn.execute(
+            f"UPDATE users SET {set_clause} WHERE id = ?", values
+        )
+        await self.conn.commit()
+        return await self.get_user(user_id)
+
+    async def delete_user(self, user_id: str) -> bool:
+        async with self.conn.execute(
+            "DELETE FROM users WHERE id = ?", (user_id,)
+        ) as cursor:
+            await self.conn.commit()
+            return cursor.rowcount > 0
+
+    async def list_users(self) -> list[dict]:
+        async with self.conn.execute(
+            "SELECT * FROM users ORDER BY created_at DESC"
+        ) as cursor:
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]

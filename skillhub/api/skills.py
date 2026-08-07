@@ -2,11 +2,10 @@
 
 import json
 from typing import Optional
-
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File, Form
 from fastapi.responses import FileResponse
 
-from skillhub.api.deps import get_db, get_storage
+from skillhub.api.deps import get_db, get_storage, require_auth
 from skillhub.database import Database
 from skillhub.models import SkillDetail, SkillFileResponse, SkillResponse
 from skillhub.storage import SkillStorage
@@ -96,6 +95,7 @@ async def download_skill_file(
 
 @router.post("", response_model=SkillResponse, status_code=201)
 async def publish_skill(
+    request: Request,
     name: str = Form(...),
     display_name: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
@@ -107,12 +107,19 @@ async def publish_skill(
     db: Database = Depends(get_db),
     storage: SkillStorage = Depends(get_storage),
 ):
+    # Require authentication for publishing
+    current_user = await require_auth(request, db)
     tags_list = json.loads(tags) if tags else []
 
     existing = await db.get_skill_by_name(name)
 
     if existing:
         skill_id = existing["id"]
+        # Publisher can only update their own skills; admin can update any
+        if current_user["role"] != "admin":
+            if existing.get("published_by") != current_user["id"]:
+                raise HTTPException(status_code=403, detail="You can only publish your own skills")
+
         await db.update_skill(
             skill_id,
             display_name=display_name,
@@ -131,6 +138,7 @@ async def publish_skill(
             tags=tags_list,
             author=author,
             license=license,
+            published_by=current_user["id"],
         )
         skill_id = record["id"]
 
@@ -153,12 +161,21 @@ async def publish_skill(
 @router.delete("/{skill_id}", status_code=204)
 async def delete_skill(
     skill_id: str,
+    request: Request,
     db: Database = Depends(get_db),
     storage: SkillStorage = Depends(get_storage),
 ):
+    # Require authentication for deleting
+    current_user = await require_auth(request, db)
+
     skill = await db.get_skill(skill_id)
     if not skill:
         raise HTTPException(status_code=404, detail="Skill not found")
+
+    # Ownership check: publishers can only delete their own skills; admin can delete any
+    if current_user["role"] != "admin":
+        if skill.get("published_by") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="You can only delete your own skills")
 
     storage.delete_skill(skill_id)
     await db.delete_skill(skill_id)

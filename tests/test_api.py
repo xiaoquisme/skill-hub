@@ -2,16 +2,39 @@
 
 import tempfile
 from pathlib import Path
-
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 
 from skillhub.main import app
 from skillhub.api import deps
+from skillhub.auth import create_token, hash_password
 from skillhub.config import AppConfig, StorageConfig
 from skillhub.database import Database
 from skillhub.storage import SkillStorage
+
+
+@pytest.fixture
+def admin_token():
+    """Create a JWT token for an admin user."""
+    return create_token("admin-user-id", "admin")
+
+
+@pytest.fixture
+def publisher_token():
+    """Create a JWT token for a publisher user."""
+    return create_token("publisher-user-id", "publisher")
+
+
+@pytest.fixture
+def viewer_token():
+    """Create a JWT token for a viewer user."""
+    return create_token("viewer-user-id", "viewer")
+
+
+def auth_headers(token: str) -> dict:
+    """Create Authorization headers with a Bearer token."""
+    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.mark.asyncio
@@ -159,6 +182,14 @@ async def test_delete_skill():
         deps._db = test_db
         deps._storage = storage
 
+        # Create an admin user for auth
+        admin_user = await test_db.create_user(
+            username="admin-delete-test",
+            password_hash=hash_password("pass123"),
+            role="admin",
+        )
+        token = create_token(admin_user["id"], "admin")
+
         # Create a skill
         skill = await test_db.create_skill(
             name="deletable-skill",
@@ -169,8 +200,11 @@ async def test_delete_skill():
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            # Delete the skill
-            response = await client.delete(f"/api/skills/{skill['id']}")
+            # Delete the skill with auth
+            response = await client.delete(
+                f"/api/skills/{skill['id']}",
+                headers=auth_headers(token),
+            )
             assert response.status_code == 204
 
             # Verify it's gone via GET
@@ -206,9 +240,20 @@ async def test_delete_skill_not_found():
         deps._config = test_config
         deps._db = test_db
 
+        # Create an admin user for auth
+        admin_user = await test_db.create_user(
+            username="admin-notfound-test",
+            password_hash=hash_password("pass123"),
+            role="admin",
+        )
+        token = create_token(admin_user["id"], "admin")
+
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.delete("/api/skills/nonexistent-id")
+            response = await client.delete(
+                "/api/skills/nonexistent-id",
+                headers=auth_headers(token),
+            )
             assert response.status_code == 404
 
         await test_db.close()
@@ -270,3 +315,677 @@ async def test_download_increments_count():
         deps._db = None
         deps._config = None
         deps._storage = None
+
+
+# ============================================================
+# U8: Auth-related tests
+# ============================================================
+
+@pytest.mark.asyncio
+async def test_login_success():
+    """Test successful login returns a JWT token."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+
+        # Create a user
+        await test_db.create_user(
+            username="testuser",
+            password_hash=hash_password("testpass"),
+            role="publisher",
+        )
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/auth/login",
+                json={"username": "testuser", "password": "testpass"},
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert "access_token" in data
+            assert data["token_type"] == "bearer"
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None
+
+
+@pytest.mark.asyncio
+async def test_login_failure_wrong_password():
+    """Test login with wrong password returns 401."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+
+        await test_db.create_user(
+            username="testuser2",
+            password_hash=hash_password("correctpass"),
+            role="viewer",
+        )
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/auth/login",
+                json={"username": "testuser2", "password": "wrongpass"},
+            )
+            assert response.status_code == 401
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None
+
+
+@pytest.mark.asyncio
+async def test_login_failure_nonexistent_user():
+    """Test login with nonexistent user returns 401."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/auth/login",
+                json={"username": "nobody", "password": "nopass"},
+            )
+            assert response.status_code == 401
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None
+
+
+@pytest.mark.asyncio
+async def test_auth_required_for_publish():
+    """Test that publishing a skill requires authentication."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        storage = SkillStorage(test_config.storage.skills_dir)
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+        deps._storage = storage
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            # Try to publish without auth
+            response = await client.post(
+                "/api/skills",
+                data={"name": "unauth-skill"},
+            )
+            assert response.status_code == 401
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None
+        deps._storage = None
+
+
+@pytest.mark.asyncio
+async def test_auth_required_for_delete():
+    """Test that deleting a skill requires authentication."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+
+        skill = await test_db.create_skill(name="protected-skill")
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            # Try to delete without auth
+            response = await client.delete(f"/api/skills/{skill['id']}")
+            assert response.status_code == 401
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None
+
+
+@pytest.mark.asyncio
+async def test_read_endpoints_public():
+    """Test that read endpoints are publicly accessible without auth."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+
+        skill = await test_db.create_skill(name="public-skill")
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            # List skills without auth - should work
+            response = await client.get("/api/skills")
+            assert response.status_code == 200
+
+            # Get skill detail without auth - should work
+            response = await client.get(f"/api/skills/{skill['id']}")
+            assert response.status_code == 200
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None
+
+
+@pytest.mark.asyncio
+async def test_publisher_cannot_delete_others_skill():
+    """Test that a publisher cannot delete another user's skill."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        storage = SkillStorage(test_config.storage.skills_dir)
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+        deps._storage = storage
+
+        # Create two publisher users
+        user_alice = await test_db.create_user(
+            username="alice",
+            password_hash=hash_password("pass123"),
+            role="publisher",
+        )
+        user_bob = await test_db.create_user(
+            username="bob",
+            password_hash=hash_password("pass456"),
+            role="publisher",
+        )
+
+        # Bob creates a skill
+        skill = await test_db.create_skill(
+            name="bobs-skill",
+            published_by=user_bob["id"],
+        )
+
+        # Alice tries to delete Bob's skill
+        alice_token = create_token(user_alice["id"], "publisher")
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.delete(
+                f"/api/skills/{skill['id']}",
+                headers=auth_headers(alice_token),
+            )
+            assert response.status_code == 403
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None
+        deps._storage = None
+
+
+@pytest.mark.asyncio
+async def test_publisher_can_delete_own_skill():
+    """Test that a publisher can delete their own skill."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        storage = SkillStorage(test_config.storage.skills_dir)
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+        deps._storage = storage
+
+        user = await test_db.create_user(
+            username="own-publisher",
+            password_hash=hash_password("pass123"),
+            role="publisher",
+        )
+
+        skill = await test_db.create_skill(
+            name="own-skill",
+            published_by=user["id"],
+        )
+
+        token = create_token(user["id"], "publisher")
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.delete(
+                f"/api/skills/{skill['id']}",
+                headers=auth_headers(token),
+            )
+            assert response.status_code == 204
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None
+        deps._storage = None
+
+
+@pytest.mark.asyncio
+async def test_admin_can_delete_any_skill():
+    """Test that admin can delete any skill regardless of ownership."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        storage = SkillStorage(test_config.storage.skills_dir)
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+        deps._storage = storage
+
+        # Create a publisher and admin
+        publisher = await test_db.create_user(
+            username="publisher-for-admin-test",
+            password_hash=hash_password("pass123"),
+            role="publisher",
+        )
+        admin = await test_db.create_user(
+            username="admin-for-delete-test",
+            password_hash=hash_password("pass456"),
+            role="admin",
+        )
+
+        # Publisher creates a skill
+        skill = await test_db.create_skill(
+            name="publisher-skill-admin-delete",
+            published_by=publisher["id"],
+        )
+
+        admin_token = create_token(admin["id"], "admin")
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.delete(
+                f"/api/skills/{skill['id']}",
+                headers=auth_headers(admin_token),
+            )
+            assert response.status_code == 204
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None
+        deps._storage = None
+
+
+@pytest.mark.asyncio
+async def test_publish_sets_published_by():
+    """Test that publishing a skill sets the published_by field."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        storage = SkillStorage(test_config.storage.skills_dir)
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+        deps._storage = storage
+
+        user = await test_db.create_user(
+            username="publisher-set-test",
+            password_hash=hash_password("pass123"),
+            role="publisher",
+        )
+
+        token = create_token(user["id"], "publisher")
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/skills",
+                data={"name": "published-skill"},
+                headers=auth_headers(token),
+            )
+            assert response.status_code == 201
+            data = response.json()
+            assert data["published_by"] == user["id"]
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None
+        deps._storage = None
+
+
+@pytest.mark.asyncio
+async def test_user_list_requires_admin():
+    """Test that listing users requires admin role."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+
+        # Create a non-admin user
+        viewer = await test_db.create_user(
+            username="viewer-for-admin-test",
+            password_hash=hash_password("pass123"),
+            role="viewer",
+        )
+
+        viewer_token = create_token(viewer["id"], "viewer")
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            # Viewer cannot list users
+            response = await client.get(
+                "/api/users",
+                headers=auth_headers(viewer_token),
+            )
+            assert response.status_code == 403
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None
+
+
+@pytest.mark.asyncio
+async def test_admin_can_list_users():
+    """Test that admin can list all users."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+
+        admin = await test_db.create_user(
+            username="admin-list-test",
+            password_hash=hash_password("pass123"),
+            role="admin",
+        )
+
+        await test_db.create_user(
+            username="user-list-test",
+            password_hash=hash_password("pass456"),
+            role="viewer",
+        )
+
+        admin_token = create_token(admin["id"], "admin")
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get(
+                "/api/users",
+                headers=auth_headers(admin_token),
+            )
+            assert response.status_code == 200
+            users = response.json()
+            assert len(users) >= 2
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None
+
+
+@pytest.mark.asyncio
+async def test_admin_create_user():
+    """Test that admin can create a new user."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+
+        admin = await test_db.create_user(
+            username="admin-create-test",
+            password_hash=hash_password("pass123"),
+            role="admin",
+        )
+
+        admin_token = create_token(admin["id"], "admin")
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/users",
+                json={
+                    "username": "newuser",
+                    "password": "newpass",
+                    "role": "publisher",
+                },
+                headers=auth_headers(admin_token),
+            )
+            assert response.status_code == 201
+            data = response.json()
+            assert data["username"] == "newuser"
+            assert data["role"] == "publisher"
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None
+
+
+@pytest.mark.asyncio
+async def test_admin_delete_user():
+    """Test that admin can delete a user (but not themselves)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+
+        admin = await test_db.create_user(
+            username="admin-delete-user-test",
+            password_hash=hash_password("pass123"),
+            role="admin",
+        )
+        target = await test_db.create_user(
+            username="target-user",
+            password_hash=hash_password("pass456"),
+            role="viewer",
+        )
+
+        admin_token = create_token(admin["id"], "admin")
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            # Delete target user
+            response = await client.delete(
+                f"/api/users/{target['id']}",
+                headers=auth_headers(admin_token),
+            )
+            assert response.status_code == 204
+
+            # Try to delete self
+            response = await client.delete(
+                f"/api/users/{admin['id']}",
+                headers=auth_headers(admin_token),
+            )
+            assert response.status_code == 400
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None
+
+
+@pytest.mark.asyncio
+async def test_change_password():
+    """Test that a user can change their own password."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+
+        user = await test_db.create_user(
+            username="pw-change-test",
+            password_hash=hash_password("oldpass"),
+            role="publisher",
+        )
+
+        token = create_token(user["id"], "publisher")
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            # Change password
+            response = await client.post(
+                "/api/auth/change-password",
+                json={"old_password": "oldpass", "new_password": "newpass"},
+                headers=auth_headers(token),
+            )
+            assert response.status_code == 200
+
+            # Try logging in with old password - should fail
+            response = await client.post(
+                "/api/auth/login",
+                json={"username": "pw-change-test", "password": "oldpass"},
+            )
+            assert response.status_code == 401
+
+            # Try logging in with new password - should succeed
+            response = await client.post(
+                "/api/auth/login",
+                json={"username": "pw-change-test", "password": "newpass"},
+            )
+            assert response.status_code == 200
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None
+
+
+@pytest.mark.asyncio
+async def test_invalid_token_rejected():
+    """Test that an invalid JWT token is rejected."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            # Try to publish with invalid token
+            response = await client.post(
+                "/api/skills",
+                data={"name": "invalid-token-skill"},
+                headers={"Authorization": "Bearer invalid.token.here"},
+            )
+            assert response.status_code == 401
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None

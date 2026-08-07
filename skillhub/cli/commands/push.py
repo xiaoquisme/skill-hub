@@ -1,14 +1,11 @@
 """Push (publish) a skill to the registry."""
-
 import json
 from pathlib import Path
-
 import click
 import httpx
 
 from skillhub.config import load_config
 from skillhub.parsing import parse_frontmatter
-
 
 def parse_skill_md(path: Path) -> dict:
     """Parse SKILL.md from a skill directory, falling back to dir name."""
@@ -30,7 +27,6 @@ def collect_files(path: Path) -> list[tuple[str, bytes]]:
             files.append((str(rel), file_path.read_bytes()))
     return files
 
-
 @click.command()
 @click.argument("path", type=click.Path(exists=True, path_type=Path))
 @click.option("--force", is_flag=True, help="Overwrite existing skill")
@@ -51,6 +47,10 @@ def push(path: Path, force: bool, server: str):
     files = collect_files(path)
     click.echo(f"  Files: {len(files)}")
 
+    headers = {}
+    if config.api_token:
+        headers["Authorization"] = f"Bearer {config.api_token}"
+
     with httpx.Client(timeout=30.0) as client:
         data = {
             "name": name,
@@ -70,6 +70,7 @@ def push(path: Path, force: bool, server: str):
             f"{registry_url}/api/skills",
             data=data,
             files=upload_files,
+            headers=headers,
         )
 
         if response.status_code == 201:

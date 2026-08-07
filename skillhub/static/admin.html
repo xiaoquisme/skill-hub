@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillHub - 后台管理</title>
+    <link rel="stylesheet" href="/ui/css/style.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="/ui/" class="nav-brand">SkillHub</a>
+            <div class="nav-links">
+                <a href="/ui/" class="nav-link">技能市场</a>
+                <a href="/ui/admin.html" class="nav-link active">后端管理</a>
+            </div>
+            <div class="nav-actions">
+                <span id="user-status" class="user-status hidden"></span>
+                <button class="btn btn-sm btn-outline" id="logout-btn">退出</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <!-- Admin Section -->
+        <section class="admin-section">
+            <h2>用户管理</h2>
+
+            <div class="admin-card">
+                <h3>创建新用户</h3>
+                <form id="create-user-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="new-username">用户名</label>
+                            <input type="text" id="new-username" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-password">密码</label>
+                            <input type="password" id="new-password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-role">角色</label>
+                            <select id="new-role">
+                                <option value="viewer">观察者</option>
+                                <option value="publisher">发布者</option>
+                                <option value="admin">管理员</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">创建用户</button>
+                </form>
+            </div>
+
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h3>用户列表</h3>
+                    <button id="load-users-btn" class="btn btn-secondary btn-sm">刷新</button>
+                </div>
+                <div id="users-list">
+                    <p class="empty">点击刷新加载用户</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>SkillHub v0.1.0 — 后台管理</p>
+        </div>
+    </footer>
+
+    <script src="/ui/js/auth.js"></script>
+    <script src="/ui/js/admin.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 非 admin 禁止访问
+            if (!Auth.isLoggedIn() || !Auth.isAdmin()) {
+                window.location.href = '/ui/login.html';
+                return;
+            }
+
+            // 显示用户状态
+            const userStatus = document.getElementById('user-status');
+            const user = Auth.getUser();
+            if (user) {
+                userStatus.textContent = '管理员';
+                userStatus.classList.remove('hidden');
+            }
+
+            // 退出登录
+            document.getElementById('logout-btn').addEventListener('click', function() {
+                Auth.logout();
+                window.location.href = '/ui/login.html';
+            });
+
+            // 初始化 Admin 模块
+            Admin.bindEvents();
+            Admin.loadUsers();
+        });
+    </script>
+</body>
+</html>

@@ -9,35 +9,105 @@
 <body>
     <header>
         <div class="container">
-            <h1>SkillHub</h1>
-            <p class="tagline" id="tagline">Hermes Agent Skills Registry</p>
+            <div class="header-row">
+                <div>
+                    <h1>SkillHub</h1>
+                    <p class="tagline" id="tagline">Hermes Agent Skills Registry</p>
+                </div>
+                <div class="header-actions">
+                    <span id="user-status" class="user-status hidden"></span>
+                    <button id="login-btn" class="btn btn-primary btn-sm" onclick="document.getElementById('login-section').classList.toggle('hidden');">Login</button>
+                    <button id="logout-btn" class="btn btn-secondary btn-sm hidden" onclick="Auth.logout(); Admin.checkAuth();">Logout</button>
+                </div>
+            </div>
         </div>
     </header>
 
     <main class="container">
-        <!-- Search and Filter -->
-        <section class="search-section">
-            <div class="search-bar">
-                <input type="text" id="search-input" placeholder="Search skills..." autocomplete="off">
-                <button id="search-btn" class="btn btn-primary">Search</button>
-            </div>
-            <div class="filters">
-                <select id="category-filter">
-                    <option value="">All Categories</option>
-                </select>
-                <select id="sort-filter">
-                    <option value="download_count" selected>Most Downloads</option>
-                    <option value="updated_at">Recently Updated</option>
-                    <option value="created_at">Newest</option>
-                    <option value="name">Name (A-Z)</option>
-                </select>
+        <!-- Login Section -->
+        <section id="login-section" class="login-section">
+            <div class="login-card">
+                <h2>Login</h2>
+                <p id="login-error" class="error hidden"></p>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="login-username">Username</label>
+                        <input type="text" id="login-username" required autocomplete="username">
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <input type="password" id="login-password" required autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </form>
             </div>
         </section>
 
-        <!-- Skill List -->
-        <section id="skill-list" class="skill-grid">
-            <div class="loading">Loading skills...</div>
-        </section>
+        <!-- App Section (shown when logged in or for public content) -->
+        <div id="app-section">
+            <!-- Admin Section -->
+            <section id="admin-section" class="admin-section hidden">
+                <h2>Admin Panel</h2>
+                <div class="admin-card">
+                    <h3>Create New User</h3>
+                    <form id="create-user-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="new-username">Username</label>
+                                <input type="text" id="new-username" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="new-password">Password</label>
+                                <input type="password" id="new-password" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="new-role">Role</label>
+                                <select id="new-role">
+                                    <option value="viewer">Viewer</option>
+                                    <option value="publisher">Publisher</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create User</button>
+                    </form>
+                </div>
+
+                <div class="admin-card">
+                    <div class="admin-card-header">
+                        <h3>Users</h3>
+                        <button id="load-users-btn" class="btn btn-secondary btn-sm" onclick="Admin.loadUsers();">Refresh</button>
+                    </div>
+                    <div id="users-list">
+                        <p class="empty">Click Refresh to load users</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Search and Filter -->
+            <section class="search-section">
+                <div class="search-bar">
+                    <input type="text" id="search-input" placeholder="Search skills..." autocomplete="off">
+                    <button id="search-btn" class="btn btn-primary">Search</button>
+                </div>
+                <div class="filters">
+                    <select id="category-filter">
+                        <option value="">All Categories</option>
+                    </select>
+                    <select id="sort-filter">
+                        <option value="download_count" selected>Most Downloads</option>
+                        <option value="updated_at">Recently Updated</option>
+                        <option value="created_at">Newest</option>
+                        <option value="name">Name (A-Z)</option>
+                    </select>
+                </div>
+            </section>
+
+            <!-- Skill List -->
+            <section id="skill-list" class="skill-grid">
+                <div class="loading">Loading skills...</div>
+            </section>
+        </div>
 
         <!-- Skill Detail Modal -->
         <div id="skill-modal" class="modal hidden">
@@ -55,7 +125,17 @@
     </footer>
 
     <script src="/ui/js/i18n.js"></script>
+    <script src="/ui/js/auth.js"></script>
     <script src="/ui/js/api.js"></script>
+    <script src="/ui/js/admin.js"></script>
     <script src="/ui/js/app.js"></script>
+    <script>
+        // Initialize auth and admin on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            Admin.init();
+            // Always show skills (public access)
+            document.getElementById('app-section').classList.remove('hidden');
+        });
+    </script>
 </body>
 </html>

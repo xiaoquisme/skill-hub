@@ -36,4 +36,45 @@ class SkillFileResponse(BaseModel):
     content_type: str = "text/markdown"
     size_bytes: Optional[int] = None
 
+
+# --- User models ---
+
+class UserBase(BaseModel):
+    username: str
+    role: str = "viewer"
+
+
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    role: str = "viewer"
+
+
+class UserResponse(BaseModel):
+    id: str
+    username: str
+    role: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class UserPasswordChange(BaseModel):
+    old_password: str
+    new_password: str
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class AdminPasswordReset(BaseModel):
+    new_password: str
+
+
 SkillDetail.model_rebuild()

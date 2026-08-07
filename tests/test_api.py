@@ -270,3 +270,134 @@ async def test_download_increments_count():
         deps._db = None
         deps._config = None
         deps._storage = None
+
+
+@pytest.mark.asyncio
+async def test_skill_detail_targets_from_frontmatter():
+    """Test that GET /api/skills/{id} returns targets parsed from SKILL.md frontmatter."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        storage = SkillStorage(test_config.storage.skills_dir)
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+        deps._storage = storage
+
+        # Create a skill with targets in SKILL.md frontmatter
+        skill = await test_db.create_skill(name="targeted-skill")
+        skillmd = b"---\ntargets: [hermes, claude-code, codex]\n---\n# Skill"
+        storage.save_skill_file(skill["id"], "SKILL.md", skillmd)
+        await test_db.add_skill_file(skill["id"], "SKILL.md", "text/markdown", len(skillmd))
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get(f"/api/skills/{skill['id']}")
+            assert response.status_code == 200
+            detail = response.json()
+            assert detail["targets"] == ["hermes", "claude-code", "codex"]
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None
+        deps._storage = None
+
+
+@pytest.mark.asyncio
+async def test_skill_detail_targets_default_when_no_frontmatter():
+    """Test that targets defaults to ['hermes'] when SKILL.md has no frontmatter."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        storage = SkillStorage(test_config.storage.skills_dir)
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+        deps._storage = storage
+
+        # Create a skill with plain SKILL.md (no frontmatter)
+        skill = await test_db.create_skill(name="plain-skill")
+        skillmd = b"# Just a heading\nNo frontmatter"
+        storage.save_skill_file(skill["id"], "SKILL.md", skillmd)
+        await test_db.add_skill_file(skill["id"], "SKILL.md", "text/markdown", len(skillmd))
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get(f"/api/skills/{skill['id']}")
+            assert response.status_code == 200
+            detail = response.json()
+            assert detail["targets"] == ["hermes"]
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None
+        deps._storage = None
+
+
+@pytest.mark.asyncio
+async def test_skill_list_includes_targets_field():
+    """Test that GET /api/skills returns targets field (defaults to ['hermes'])."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        test_config = AppConfig(
+            storage=StorageConfig(
+                data_dir=tmpdir_path / "data",
+                skills_dir=tmpdir_path / "skills",
+            ),
+        )
+        test_db = Database(test_config.storage.data_dir / "skillhub.db")
+        await test_db.connect()
+
+        deps._config = test_config
+        deps._db = test_db
+
+        skill = await test_db.create_skill(name="list-skill")
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/api/skills")
+            assert response.status_code == 200
+            skills = response.json()
+            assert len(skills) == 1
+            assert "targets" in skills[0]
+            assert skills[0]["targets"] == ["hermes"]
+
+        await test_db.close()
+        deps._db = None
+        deps._config = None
+
+
+@pytest.mark.asyncio
+async def test_list_targets_endpoint():
+    """Test GET /api/targets returns available targets."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/targets")
+        assert response.status_code == 200
+        data = response.json()
+        assert "targets" in data
+        assert "default" in data
+        target_names = [t["name"] for t in data["targets"]]
+        assert "hermes" in target_names
+        assert "claude-code" in target_names
+        assert "codex" in target_names
+        # Each target has required fields
+        for t in data["targets"]:
+            assert "name" in t
+            assert "description" in t
+            assert "scope" in t
+            assert "enabled" in t

@@ -419,3 +419,75 @@ footer {
         padding: 20px;
     }
 }
+
+/* Target badges */
+.target-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.target-section h4 {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.target-badges {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.target-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.target-hermes {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.target-claude-code {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.target-codex {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.install-commands {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.install-command {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg);
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+
+.install-command code {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text);
+    word-break: break-all;
+}
+
+.install-command .copy-btn {
+    flex-shrink: 0;
+}

@@ -1,6 +1,8 @@
 """Skill CRUD endpoints."""
 
+import asyncio
 import json
+import re
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
@@ -12,6 +14,31 @@ from skillhub.models import SkillDetail, SkillFileResponse, SkillResponse
 from skillhub.storage import SkillStorage
 
 router = APIRouter(prefix="/api/skills", tags=["skills"])
+
+
+def _extract_platforms_from_skillmd(skill_id: str, storage: SkillStorage) -> list[str]:
+    """Extract install targets from SKILL.md frontmatter, defaulting to ['hermes']."""
+    try:
+        content = storage.get_skill_file(skill_id, "SKILL.md")
+        if not content:
+            return ["hermes"]
+        text = content.decode("utf-8", errors="replace")
+        match = re.match(r"^---\s*\n(.*?)\n---\s*\n", text, re.DOTALL)
+        if not match:
+            return ["hermes"]
+        import yaml
+        frontmatter = yaml.safe_load(match.group(1))
+        if not frontmatter:
+            return ["hermes"]
+        # Prefer 'targets' field (install targets), fall back to 'platforms'
+        targets = frontmatter.get("targets")
+        if targets is None:
+            targets = frontmatter.get("platforms")
+        if isinstance(targets, list):
+            return [str(t) for t in targets]
+        return ["hermes"]
+    except Exception:
+        return ["hermes"]
 
 
 def _skill_from_row(row: dict) -> SkillResponse:
@@ -48,15 +75,16 @@ async def list_skills(
 
 
 @router.get("/{skill_id}", response_model=SkillDetail)
-async def get_skill(skill_id: str, db: Database = Depends(get_db)):
+async def get_skill(skill_id: str, db: Database = Depends(get_db), storage: SkillStorage = Depends(get_storage)):
     skill = await db.get_skill(skill_id)
     if not skill:
         raise HTTPException(status_code=404, detail="Skill not found")
 
     files = await db.get_skill_files(skill_id)
+    platforms = await asyncio.to_thread(_extract_platforms_from_skillmd, skill_id, storage)
 
     return SkillDetail(
-        **_skill_from_row(skill).model_dump(exclude={"file_count"}),
+        **_skill_from_row(skill).model_dump(exclude={"file_count", "targets"}),
         file_count=len(files),
         files=[
             SkillFileResponse(
@@ -66,6 +94,7 @@ async def get_skill(skill_id: str, db: Database = Depends(get_db)):
             )
             for f in files
         ],
+        targets=platforms,
     )
 
 

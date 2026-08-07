@@ -146,6 +146,19 @@
             var tagsHtml = (skill.tags || []).length > 0 ?
                 '<dt>' + t('skill.detail.tags') + '</dt><dd>' + skill.tags.map(function(t) { return escapeHtml(t); }).join(', ') + '</dd>' : '';
 
+            var targets = skill.targets || ['hermes'];
+            var targetBadgesHtml = targets.map(function(target) {
+                return '<span class="target-badge target-' + target + '">' + escapeHtml(target) + '</span>';
+            }).join('');
+            var installCommandsHtml = targets.map(function(target) {
+                var cmd = 'skillhub install ' + skill.name + ' --target ' + target;
+                var escapedCmd = cmd.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                return '<div class="install-command">' +
+                    '<code>' + escapeHtml(cmd) + '</code>' +
+                    '<button class="copy-btn" onclick="copyToClipboard(this, \'' + escapedCmd + '\')">' + t('skill.detail.copy') + '</button>' +
+                '</div>';
+            }).join('');
+
             skillDetail.innerHTML =
                 '<h2>' + escapeHtml(skill.display_name || skill.name) + '</h2>' +
                 '<p class="description">' + escapeHtml(skill.description || t('skill.no_description_available')) + '</p>' +
@@ -155,9 +168,10 @@
                     '<dt>' + t('skill.detail.updated') + '</dt><dd>' + formatDate(skill.updated_at) + '</dd>' +
                 '</dl>' +
                 filesHtml + mdHtml +
-                '<div class="install-command">' +
-                    '<code>skillhub install ' + escapeHtml(skill.name) + '</code>' +
-                    '<button class="copy-btn" onclick="copyInstallCommand(\'' + escapeHtml(skill.name) + '\')">' + t('skill.detail.copy') + '</button>' +
+                '<div class="target-section">' +
+                    '<h4>' + t('skill.detail.targets') + '</h4>' +
+                    '<div class="target-badges">' + targetBadgesHtml + '</div>' +
+                    '<div class="install-commands">' + installCommandsHtml + '</div>' +
                 '</div>' +
                 '<div class="delete-section">' +
                     '<button class="btn btn-danger btn-sm delete-skill-btn">' + t('skill.detail.delete') + '</button>' +
@@ -176,14 +190,11 @@
         }
     }
 
-    window.copyInstallCommand = function(name) {
-        var cmd = 'skillhub install ' + name;
-        navigator.clipboard.writeText(cmd).then(function() {
-            var btn = document.querySelector('.copy-btn');
-            if (btn) {
-                btn.textContent = t('skill.detail.copied');
-                setTimeout(function() { btn.textContent = t('skill.detail.copy'); }, 2000);
-            }
+    window.copyToClipboard = function(btn, text) {
+        navigator.clipboard.writeText(text).then(function() {
+            var original = btn.textContent;
+            btn.textContent = t('skill.detail.copied');
+            setTimeout(function() { btn.textContent = original; }, 2000);
         });
     };
 

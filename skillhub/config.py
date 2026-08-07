@@ -21,10 +21,21 @@ class StorageConfig(BaseModel):
     skills_dir: Path = Field(default_factory=lambda: Path.home() / ".skillhub" / "skills")
 
 
+class TargetConfig(BaseModel):
+    """Per-target installation defaults."""
+    scope: str = "user"  # "user" or "project"
+    enabled: bool = True
+
+
 class AppConfig(BaseModel):
     """Application configuration."""
     server: ServerConfig = Field(default_factory=ServerConfig)
     storage: StorageConfig = Field(default_factory=StorageConfig)
+    targets: dict[str, TargetConfig] = Field(default_factory=lambda: {
+        "hermes": TargetConfig(scope="user", enabled=True),
+        "claude-code": TargetConfig(scope="user", enabled=True),
+        "codex": TargetConfig(scope="user", enabled=True),
+    })
     registry_url: str = "http://127.0.0.1:8000"
 
 
@@ -34,12 +45,13 @@ CONFIG_FILE = CONFIG_DIR / "config.yaml"
 
 def load_config(config_path: Optional[Path] = None) -> AppConfig:
     """Load configuration from YAML file, falling back to defaults.
-    
+
     Environment variables override YAML values for Docker deployments:
     - SKILLHUB_DATA_DIR: overrides storage.data_dir
     - SKILLHUB_SKILLS_DIR: overrides storage.skills_dir
     - SKILLHUB_HOST: overrides server.host
     - SKILLHUB_PORT: overrides server.port
+    - SKILLHUB_DEFAULT_TARGET: moves the specified target to first position
     """
     path = config_path or CONFIG_FILE
     if path.exists():
@@ -58,6 +70,13 @@ def load_config(config_path: Optional[Path] = None) -> AppConfig:
         config.server.host = host
     if port := os.environ.get("SKILLHUB_PORT"):
         config.server.port = int(port)
+
+    # Target defaults
+    if default_target := os.environ.get("SKILLHUB_DEFAULT_TARGET"):
+        # Move the specified target to first position for default usage
+        if default_target in config.targets:
+            target_config = config.targets.pop(default_target)
+            config.targets = {default_target: target_config, **config.targets}
 
     return config
 

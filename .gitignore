@@ -10,3 +10,4 @@ build/
 
 # Compound Engineering local config
 .compound-engineering/*.local.yaml
+.DS_Store

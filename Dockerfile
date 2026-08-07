@@ -1,5 +1,8 @@
 FROM python:3.11-slim
 
+# Use Chinese mirrors for apt (safe for non-CN too — falls back to upstream if unreachable)
+RUN sed -i s/deb.debian.org/mirrors.aliyun.com/g /etc/apt/sources.list.d/debian.sources
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
@@ -11,7 +14,7 @@ WORKDIR /app
 # Copy source code and install dependencies
 COPY pyproject.toml README.md ./
 COPY skillhub/ skillhub/
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com .
 
 # Create data directories
 RUN mkdir -p /data/skills /data/db

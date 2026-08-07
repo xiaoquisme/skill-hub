@@ -73,5 +73,9 @@ def save_config(config: AppConfig, config_path: Optional[Path] = None) -> None:
     """Save configuration to YAML file."""
     path = config_path or CONFIG_FILE
     path.parent.mkdir(parents=True, exist_ok=True)
+    data = config.model_dump()
+    # Convert Path objects to strings for YAML serialization
+    data["storage"]["data_dir"] = str(data["storage"]["data_dir"])
+    data["storage"]["skills_dir"] = str(data["storage"]["skills_dir"])
     with open(path, "w") as f:
-        yaml.dump(config.model_dump(), f, default_flow_style=False)
+        yaml.dump(data, f, default_flow_style=False)

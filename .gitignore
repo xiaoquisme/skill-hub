@@ -1,13 +1,30 @@
+# Python
 __pycache__/
 *.py[cod]
+*$py.class
 *.egg-info/
 dist/
 build/
-.venv/
-*.db
-*.sqlite
-.env
+.eggs/
 
-# Compound Engineering local config
-.compound-engineering/*.local.yaml
+# Virtual environments
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
 .DS_Store
+Thumbs.db
+
+# SkillHub data
+*.db
+data/
+skills/
+
+# Environment
+.env.local

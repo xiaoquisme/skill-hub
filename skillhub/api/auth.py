@@ -1,6 +1,7 @@
 """Auth API endpoints - login and password management."""
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse
 
 from skillhub.api.deps import get_db, require_auth
 from skillhub.auth import hash_password, verify_password
@@ -24,7 +25,25 @@ async def login(request: LoginRequest, db: Database = Depends(get_db)):
 
     from skillhub.auth import create_token
     token = create_token(user["id"], user["role"])
-    return TokenResponse(access_token=token)
+
+    # Set token as HttpOnly cookie for UI auth middleware
+    response = JSONResponse(content=TokenResponse(access_token=token).model_dump())
+    response.set_cookie(
+        key="skillhub_token",
+        value=token,
+        httponly=True,
+        samesite="lax",
+        max_age=86400 * 30,  # 30 days
+    )
+    return response
+
+
+@router.post("/logout")
+async def logout():
+    """Clear the auth cookie."""
+    response = JSONResponse(content={"detail": "Logged out"})
+    response.delete_cookie(key="skillhub_token")
+    return response
 
 
 @router.post("/change-password", response_model=UserResponse)

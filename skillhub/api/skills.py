@@ -33,6 +33,7 @@ def _skill_from_row(row: dict) -> SkillResponse:
 
 @router.get("", response_model=list[SkillResponse])
 async def list_skills(
+    request: Request,
     q: Optional[str] = Query(None, description="Search query"),
     category: Optional[str] = Query(None, description="Filter by category"),
     sort: str = Query("updated_at", description="Sort field"),
@@ -40,6 +41,7 @@ async def list_skills(
     offset: int = Query(0, ge=0),
     db: Database = Depends(get_db),
 ):
+    await require_auth(request, db)
     skills = await db.list_skills(
         query=q, category=category, sort=sort, limit=limit, offset=offset
     )
@@ -47,7 +49,8 @@ async def list_skills(
 
 
 @router.get("/{skill_id}", response_model=SkillDetail)
-async def get_skill(skill_id: str, db: Database = Depends(get_db)):
+async def get_skill(skill_id: str, request: Request, db: Database = Depends(get_db)):
+    await require_auth(request, db)
     skill = await db.get_skill(skill_id)
     if not skill:
         raise HTTPException(status_code=404, detail="Skill not found")
@@ -72,9 +75,11 @@ async def get_skill(skill_id: str, db: Database = Depends(get_db)):
 async def download_skill_file(
     skill_id: str,
     filename: str,
+    request: Request,
     db: Database = Depends(get_db),
     storage: SkillStorage = Depends(get_storage),
 ):
+    await require_auth(request, db)
     skill = await db.get_skill(skill_id)
     if not skill:
         raise HTTPException(status_code=404, detail="Skill not found")

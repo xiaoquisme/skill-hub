@@ -3,8 +3,9 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from skillhub.api.deps import get_config, get_db, get_storage
@@ -57,6 +58,37 @@ async def health():
 app.include_router(skills_router)
 app.include_router(auth_router)
 app.include_router(users_router)
+
+
+# --- Auth middleware for UI pages ---
+# Protects /ui/ pages (except login, static assets) from unauthenticated access.
+# Redirects unauthenticated browser requests to the login page.
+
+PUBLIC_UI_PATHS = {"/ui/login.html"}
+UI_ASSET_PREFIXES = ("/ui/css/", "/ui/js/", "/ui/locales/")
+
+
+@app.middleware("http")
+async def auth_redirect_middleware(request: Request, call_next):
+    path = request.url.path
+
+    # Only apply to /ui/ paths
+    if path.startswith("/ui/"):
+        # Allow login page and static assets (css, js, locales) without auth
+        if path in PUBLIC_UI_PATHS or any(path.startswith(p) for p in UI_ASSET_PREFIXES):
+            return await call_next(request)
+
+        # Check for JWT token in cookie (set during login)
+        token = request.cookies.get("skillhub_token", "")
+        if token:
+            # Cookie exists — let the request through (API will validate if needed)
+            return await call_next(request)
+
+        # No cookie — redirect to login
+        return RedirectResponse(url="/ui/login.html", status_code=302)
+
+    return await call_next(request)
+
 
 static_dir = Path(__file__).parent / "static"
 if static_dir.exists():

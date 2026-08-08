@@ -58,6 +58,8 @@ const Auth = {
     },
 
     logout() {
+        // Call server to clear the auth cookie
+        fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
         this.clearToken();
     },
 

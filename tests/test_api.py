@@ -62,9 +62,17 @@ async def test_list_skills_empty():
         deps._config = test_config
         deps._db = test_db
 
+        # Create admin user for auth
+        admin_user = await test_db.create_user(
+            username="test-admin",
+            password_hash=hash_password("pass"),
+            role="admin",
+        )
+        token = create_token(admin_user["id"], "admin")
+
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.get("/api/skills")
+            response = await client.get("/api/skills", headers=auth_headers(token))
             assert response.status_code == 200
             assert response.json() == []
 
@@ -136,6 +144,14 @@ async def test_skill_response_includes_download_count():
         deps._config = test_config
         deps._db = test_db
 
+        # Create admin user for auth
+        admin_user = await test_db.create_user(
+            username="test-admin",
+            password_hash=hash_password("pass"),
+            role="admin",
+        )
+        token = create_token(admin_user["id"], "admin")
+
         # Create a skill via the database directly
         skill = await test_db.create_skill(
             name="downloadable-skill",
@@ -146,14 +162,14 @@ async def test_skill_response_includes_download_count():
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             # List skills and check download_count is present
-            response = await client.get("/api/skills")
+            response = await client.get("/api/skills", headers=auth_headers(token))
             assert response.status_code == 200
             skills = response.json()
             assert len(skills) == 1
             assert skills[0]["download_count"] == 0
 
             # Get skill detail and check download_count
-            response = await client.get(f"/api/skills/{skill['id']}")
+            response = await client.get(f"/api/skills/{skill['id']}", headers=auth_headers(token))
             assert response.status_code == 200
             detail = response.json()
             assert detail["download_count"] == 0
@@ -208,11 +224,11 @@ async def test_delete_skill():
             assert response.status_code == 204
 
             # Verify it's gone via GET
-            response = await client.get(f"/api/skills/{skill['id']}")
+            response = await client.get(f"/api/skills/{skill['id']}", headers=auth_headers(token))
             assert response.status_code == 404
 
             # Verify it's absent from the list
-            response = await client.get("/api/skills")
+            response = await client.get("/api/skills", headers=auth_headers(token))
             assert response.status_code == 200
             skills = response.json()
             assert all(s["id"] != skill["id"] for s in skills)
@@ -280,6 +296,14 @@ async def test_download_increments_count():
         deps._db = test_db
         deps._storage = storage
 
+        # Create admin user for auth
+        admin_user = await test_db.create_user(
+            username="test-admin",
+            password_hash=hash_password("pass"),
+            role="admin",
+        )
+        token = create_token(admin_user["id"], "admin")
+
         # Create a skill with a file
         skill = await test_db.create_skill(name="dl-skill")
         storage.save_skill_file(skill["id"], "SKILL.md", b"# Download me")
@@ -288,27 +312,29 @@ async def test_download_increments_count():
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             # Verify initial count
-            response = await client.get("/api/skills")
+            response = await client.get("/api/skills", headers=auth_headers(token))
             assert response.json()[0]["download_count"] == 0
 
             # Download the file
             response = await client.get(
-                f"/api/skills/{skill['id']}/files/SKILL.md"
+                f"/api/skills/{skill['id']}/files/SKILL.md",
+                headers=auth_headers(token),
             )
             assert response.status_code == 200
 
             # Verify count incremented
-            response = await client.get("/api/skills")
+            response = await client.get("/api/skills", headers=auth_headers(token))
             assert response.json()[0]["download_count"] == 1
 
             # Download again
             response = await client.get(
-                f"/api/skills/{skill['id']}/files/SKILL.md"
+                f"/api/skills/{skill['id']}/files/SKILL.md",
+                headers=auth_headers(token),
             )
             assert response.status_code == 200
 
             # Verify count is now 2
-            response = await client.get("/api/skills")
+            response = await client.get("/api/skills", headers=auth_headers(token))
             assert response.json()[0]["download_count"] == 2
 
         await test_db.close()
@@ -492,8 +518,8 @@ async def test_auth_required_for_delete():
 
 
 @pytest.mark.asyncio
-async def test_read_endpoints_public():
-    """Test that read endpoints are publicly accessible without auth."""
+async def test_read_endpoints_require_auth():
+    """Test that read endpoints require authentication."""
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir_path = Path(tmpdir)
         test_config = AppConfig(
@@ -508,16 +534,29 @@ async def test_read_endpoints_public():
         deps._config = test_config
         deps._db = test_db
 
-        skill = await test_db.create_skill(name="public-skill")
+        skill = await test_db.create_skill(name="protected-skill")
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            # List skills without auth - should work
+            # List skills without auth - should be rejected
             response = await client.get("/api/skills")
+            assert response.status_code == 401
+
+            # Get skill detail without auth - should be rejected
+            response = await client.get(f"/api/skills/{skill['id']}")
+            assert response.status_code == 401
+
+            # With auth - should work
+            admin_user = await test_db.create_user(
+                username="test-admin",
+                password_hash=hash_password("pass"),
+                role="admin",
+            )
+            token = create_token(admin_user["id"], "admin")
+            response = await client.get("/api/skills", headers=auth_headers(token))
             assert response.status_code == 200
 
-            # Get skill detail without auth - should work
-            response = await client.get(f"/api/skills/{skill['id']}")
+            response = await client.get(f"/api/skills/{skill['id']}", headers=auth_headers(token))
             assert response.status_code == 200
 
         await test_db.close()
